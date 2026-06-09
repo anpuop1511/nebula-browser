@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nebula Browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="browser-container">
+    <!-- Redesigned Top Header Bar (Merges Tabs, Address Bar & Navigation) -->
+    <header class="header-bar address-mode" id="header-bar">
+      <!-- App Brand Logo -->
+      <div class="app-logo" id="app-logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" width="18" height="18">
+          <circle cx="12" cy="12" r="10" fill="url(#grad)" />
+          <defs>
+            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#8a2be2;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#00ffff;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M12 6v12M6 12h12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Nebula</span>
+      </div>
+
+      <!-- Collapsed State Domain Button -->
+      <button class="collapsed-domain-btn" id="collapsed-domain-btn" title="Click to search / type URL">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span id="collapsed-domain-text">newtab</span>
+      </button>
+
+      <!-- Center Dynamic Tab Strip (Visible in Tab Mode) -->
+      <div class="tab-center-wrapper" id="tab-center-wrapper">
+        <div class="tab-strip" id="tab-strip">
+          <!-- Dynamic Tabs -->
+        </div>
+        <button class="new-tab-btn" id="new-tab-btn" title="New Tab">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Chrome-style Tab Counter Button (Visible in Address Mode) -->
+      <button class="tab-counter-btn" id="tab-counter-btn" title="Show Tab Manager">
+        <span id="tab-counter-value">1</span>
+      </button>
+
+      <!-- Smart Expandable Address Bar -->
+      <div class="address-container" id="top-address-container">
+        <span class="security-badge secure" id="security-badge">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" id="lock-icon">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </span>
+        <input type="text" id="address-bar" placeholder="Search with Google or type URL" autocomplete="off">
+        <button id="bookmark-btn" class="action-btn" title="Bookmark this page">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="star-icon">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Unified Header Right Buttons -->
+      <div class="header-right-buttons">
+        <button id="back-btn" class="nav-btn" title="Back" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </button>
+        <button id="forward-btn" class="nav-btn" title="Forward" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+        <button id="refresh-btn" class="nav-btn" title="Reload">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+          </svg>
+        </button>
+        <button id="home-btn" class="nav-btn" title="Home">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </button>
+        <div class="header-divider"></div>
+        <button id="bookmarks-menu-btn" class="nav-btn" title="Bookmarks Manager">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+        <button id="history-menu-btn" class="nav-btn" title="Browsing History">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </button>
+        <button id="settings-btn" class="nav-btn" title="Nebula Settings">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button id="header-gemini-spark" class="nav-btn gemini-spark-btn" title="Open Gemini AI">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3v18M3 12h18M12 3l3 3-3 3-3-3 3-3zm0 9l3 3-3 3-3-3 3-3z"/>
+          </svg>
+        </button>
+        <button id="header-notes-btn" class="nav-btn" title="Toggle Notepad">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Slide-Down Permission Request Banner -->
+    <div class="permission-banner hidden" id="permission-banner">
+      <div class="permission-banner-content">
+        <svg class="permission-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>
+        </svg>
+        <span id="permission-text">Website wants to access your camera</span>
+      </div>
+      <div class="permission-banner-actions">
+        <button id="permission-allow-btn" class="permission-btn allow-btn">Allow</button>
+        <button id="permission-deny-btn" class="permission-btn deny-btn">Block</button>
+      </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <main class="main-content" id="main-content">
+      <!-- Webview Container (Web pages loaded here dynamically) -->
+      <div class="webview-container" id="webview-container">
+        <!-- Settings Dashboard Panel (Native Page) -->
+        <div class="settings-dashboard hidden" id="settings-dashboard">
+          <div class="settings-sidebar">
+            <div class="settings-logo">
+              <span>Settings</span>
+            </div>
+            <div class="settings-menu-item active" data-sec="themes-section">Themes</div>
+            <div class="settings-menu-item" data-sec="layout-section">Layout</div>
+            <div class="settings-menu-item" data-sec="bookmarks-section">Bookmarks</div>
+            <div class="settings-menu-item" data-sec="history-section">History</div>
+            <div class="settings-menu-item" data-sec="about-section">About</div>
+          </div>
+          <div class="settings-body">
+            <!-- Themes Section -->
+            <div class="settings-section active" id="themes-section">
+              <h2>Visual Customization</h2>
+              <p>Choose a visual style that matches your workflow.</p>
+              <div class="theme-grid">
+                <div class="theme-card active" data-theme="deep-space">
+                  <div class="theme-preview deep-space-preview"></div>
+                  <span>Deep Space (Default)</span>
+                </div>
+                <div class="theme-card" data-theme="cyberpunk">
+                  <div class="theme-preview cyberpunk-preview"></div>
+                  <span>Cyberpunk Neon</span>
+                </div>
+                <div class="theme-card" data-theme="aurora">
+                  <div class="theme-preview aurora-preview"></div>
+                  <span>Aurora Glass</span>
+                </div>
+                <div class="theme-card" data-theme="light-frost">
+                  <div class="theme-preview light-frost-preview"></div>
+                  <span>Light Frost</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Layout Preferences Section -->
+            <div class="settings-section" id="layout-section">
+              <h2>Layout Preferences</h2>
+              <p>Configure alignment, behaviors, and active widgets.</p>
+              <div class="layout-settings-row">
+                <div class="setting-item">
+                  <label for="sidebar-pos-select"><strong>AI Sidebar Anchor:</strong></label>
+                  <select id="sidebar-pos-select" class="layout-select">
+                    <option value="right">Right Side (Default)</option>
+                    <option value="left">Left Side</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label for="neon-toggle"><strong>Nebula Neon Mode:</strong></label>
+                  <select id="neon-toggle" class="layout-select">
+                    <option value="false">Off (Default)</option>
+                    <option value="true">On (Neon Websites)</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label for="agent-toggle"><strong>Nebula Agent Mode (Requires Restart):</strong></label>
+                  <select id="agent-toggle" class="layout-select">
+                    <option value="false">Off (Default)</option>
+                    <option value="true">On (Agent Experience)</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label for="privacy-toggle"><strong>Privacy Mode:</strong></label>
+                  <select id="privacy-toggle" class="layout-select">
+                    <option value="false">Off (Default)</option>
+                    <option value="true">On (Prompt for Permissions)</option>
+                  </select>
+                </div>
+                <div class="setting-item-column">
+                  <strong>Customize Toolbar:</strong>
+                  <div class="checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="tb-home" checked> Home Button
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="tb-history" checked> History
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="tb-bookmarks" checked> Bookmarks
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="tb-gemini" checked> Gemini Spark
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="tb-notes" checked> Notepad
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Bookmarks Section -->
+            <div class="settings-section" id="bookmarks-section">
+              <h2>Bookmarks Manager</h2>
+              <div class="settings-search-bar">
+                <input type="text" id="settings-bookmarks-search" placeholder="Search saved bookmarks...">
+              </div>
+              <div class="settings-list" id="settings-bookmarks-list">
+                <!-- Loaded Dynamically -->
+              </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="settings-section" id="history-section">
+              <h2>History Manager</h2>
+              <div class="settings-search-bar">
+                <input type="text" id="settings-history-search" placeholder="Search browsing history...">
+                <button class="clear-data-btn" id="clear-history-btn">Clear All History</button>
+              </div>
+              <div class="settings-list" id="settings-history-list">
+                <!-- Loaded Dynamically -->
+              </div>
+            </div>
+
+            <!-- About Section -->
+            <div class="settings-section" id="about-section">
+              <h2>About Nebula Browser</h2>
+              <p>Nebula Browser is a high-performance custom browser wrapper built on top of Chromium.</p>
+              <div class="about-details">
+                <div class="about-row"><strong>Version:</strong> <span>1.1.0 (Feature Drop)</span></div>
+                <div class="about-row"><strong>Chromium Base:</strong> <span>v120.0.0.0</span></div>
+                <div class="about-row"><strong>Framework:</strong> <span>Electron v31.7.7</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Tab Dashboard / Default View -->
+        <div class="new-tab-dashboard" id="new-tab-dashboard">
+          <div class="dashboard-content">
+            <h1 class="dashboard-title">Nebula</h1>
+            <p class="dashboard-subtitle">Explore the web with speed and style</p>
+
+            <div class="search-box-container">
+              <input type="text" id="search-box" placeholder="Search the web with Google..." autocomplete="off">
+              <button id="search-box-btn" title="Search Google">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+              <!-- Gemini Spark Widget (on right by default) -->
+              <button class="gemini-spark-btn" id="newtab-gemini-spark" title="Open Gemini Web AI">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 3v18M3 12h18M12 3l3 3-3 3-3-3 3-3zm0 9l3 3-3 3-3-3 3-3z"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Center Stage Gemini Spark Button (Hidden by default) -->
+            <div class="center-spark-container hidden" id="center-spark-container">
+              <button class="gemini-spark-large" id="gemini-spark-large">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 3v18M3 12h18M12 3l3 3-3 3-3-3 3-3zm0 9l3 3-3 3-3-3 3-3z"/>
+                </svg>
+                <span>Ask Gemini</span>
+              </button>
+            </div>
+
+            <!-- Speed Dial Grid -->
+            <div class="speed-dial-grid" id="speed-dial-grid">
+              <div class="speed-dial-item" data-url="https://google.com">
+                <div class="icon-wrapper google">G</div>
+                <span>Google</span>
+              </div>
+              <div class="speed-dial-item" data-url="https://youtube.com">
+                <div class="icon-wrapper youtube">Y</div>
+                <span>YouTube</span>
+              </div>
+              <div class="speed-dial-item" data-url="https://github.com">
+                <div class="icon-wrapper github">H</div>
+                <span>GitHub</span>
+              </div>
+              <div class="speed-dial-item" data-url="https://wikipedia.org">
+                <div class="icon-wrapper wikipedia">W</div>
+                <span>Wikipedia</span>
+              </div>
+              <div class="speed-dial-item" data-url="https://reddit.com">
+                <div class="icon-wrapper reddit">R</div>
+                <span>Reddit</span>
+              </div>
+              <div class="speed-dial-item add-shortcut" id="add-shortcut-btn">
+                <div class="icon-wrapper add">+</div>
+                <span>Add Site</span>
+              </div>
+            </div>
+
+            <!-- Time Display -->
+            <div class="time-widget" id="time-widget">12:00 PM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bookmarks / History Overlay Manager Panel -->
+      <div id="manager-overlay" class="overlay-panel hidden">
+        <div class="overlay-header">
+          <h2 id="overlay-title">Bookmarks</h2>
+          <button id="close-overlay-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="overlay-body">
+          <div class="search-overlay-bar">
+            <input type="text" id="overlay-search-input" placeholder="Search items...">
+          </div>
+          <div id="overlay-list" class="overlay-list">
+            <!-- List items loaded here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Panel (AI + Notes) -->
+      <aside class="sidebar-panel collapsed" id="sidebar-panel">
+        <!-- Resizer handle -->
+        <div class="sidebar-resizer" id="sidebar-resizer"></div>
+        
+        <div class="sidebar-content-wrapper">
+          <!-- Official Gemini Web Interface -->
+          <div class="sidebar-tab-content active" id="ai-panel" style="padding: 0; position: relative;">
+            <webview id="gemini-webview" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" allowpopups="true" preload="./gemini-preload.js" style="width: 100%; height: 100%; display: block; background: #1e1e24;"></webview>
+          </div>
+
+          <!-- Notes Panel -->
+          <div class="sidebar-tab-content" id="notes-panel">
+            <textarea id="notes-textarea" placeholder="Jot down research, URLs, or scripts here. Notes are automatically saved."></textarea>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Nebula Agent Floating Bottom Pill -->
+    <div id="agent-pill" class="agent-pill-container">
+      <div class="agent-tabs-dots" id="agent-tabs-dots">
+        <!-- Tab dot circles will be generated here -->
+      </div>
+      <div class="agent-pill-main">
+        <button id="agent-quick-switch" class="agent-quick-switch-btn" title="Adaptive Tab Quick Switch">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 1 21 5"></polyline>
+            <line x1="4" y1="20" x2="21" y2="3"></line>
+            <polyline points="7 23 3 23 3 19"></polyline>
+            <line x1="3" y1="23" x2="20" y2="6"></line>
+          </svg>
+        </button>
+        <button id="agent-new-tab" class="agent-pill-btn" title="New Tab">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <div class="agent-address-wrapper">
+          <input type="text" id="agent-address-bar" placeholder="Search or type URL" autocomplete="off">
+        </div>
+        <button id="agent-settings" class="agent-pill-btn" title="Settings">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Bar / Loading Progress -->
+    <footer class="status-bar">
+      <div class="status-text" id="status-text">Ready</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+Created At: 2026-06-10T13:06:15Z
+Completed At: 2026-06-10T13:06:15Z
+File Path: `file:///C:/Users/anpuo/.gemini/antigravity/scratch/nebula-browser/renderer.js`
+Total Lines: 2907
+Total Bytes: 98216
+Showing lines 801 to 1600
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+801:   // Hide suggestions dropdown when clicking outside
+802:   document.addEventListener('click', (e) => {
+803:     const dropdown = document.getElementById('suggestions-dropdown');
+804:     if (dropdown && !dropdown.contains(e.target) && e.target !== addressBar && e.target !== agentAddressBar) {
+805:       dropdown.classList.add('hidden');
+806:     }
+807:   });
+808: }
+809: 
+810: // -------------------------------------------------------------
+811: // TAB OPERATIONS
+812: // -------------------------------------------------------------
+813: function createNewTab(url = 'newtab') {
+814:   const tabId = 'tab-' + Date.now() + Math.random().toString(36).substr(2, 5);
+815:   
+816:   // 1. Create Tab DOM
+817:   const tabEl = document.createElement('div');
+818:   tabEl.className = 'tab';
+819:   tabEl.id = tabId;
+820:   tabEl.innerHTML = `
+821:     <img class="tab-favicon" src="" style="display: none;">
+822:     <span class="tab-title">New Tab</span>
+823:     <button class="tab-close-btn">&times;</button>
+824:   `;
+825:   
+826:   tabEl.addEventListener('click', (e) => {
+827:     if (e.target.classList.contains('tab-close-btn')) {
+828:       e.stopPropagation();
+829:       closeTab(tabId);
+830:     } else {
+831:       activateTab(tabId);
+832:     }
+833:   });
+834:   
+835:   tabStrip.appendChild(tabEl);
+836: 
+837:   // 2. Create Webview (if not newtab, or we lazy render)
+838:   let webview = null;
+839:   if (url !== 'newtab') {
+840:     webview = createWebviewElement(tabId, url);
+841:     webviewContainer.appendChild(webview);
+842:     webview.setAttribute('src', clea
+<truncated 27660 bytes>
+gle.com';
+1550:       geminiWebview.addEventListener('dom-ready', () => {
+1551:         geminiWebview.setZoomFactor(0.8);
+1552:       });
+1553:     }
+1554:   } else {
+1555:     if (sidebarHeaderTitle) sidebarHeaderTitle.textContent = 'Nebula Notes';
+1556:     if (headerNotesBtn) headerNotesBtn.classList.add('active');
+1557:     if (headerGeminiSpark) {
+1558:       headerGeminiSpark.classList.remove('active');
+1559:       headerGeminiSpark.classList.remove('expanded');
+1560:     }
+1561: 
+1562:     // Switch panels
+1563:     notesPanel.classList.add('active');
+1564:     aiPanel.classList.remove('active');
+1565:   }
+1566: }
+1567: 
+1568: // Apply themes dynamically
+1569: function applyTheme(themeName) {
+1570:   document.documentElement.setAttribute('data-theme', themeName);
+1571:   localStorage.setItem('nebula_theme', themeName);
+1572: 
+1573:   document.querySelectorAll('.theme-card').forEach(card => {
+1574:     if (card.dataset.theme === themeName) {
+1575:       card.classList.add('active');
+1576:     } else {
+1577:       card.classList.remove('active');
+1578:     }
+1579:   });
+1580: }
+1581: 
+1582: // Shifting the sidebar left/right alignment
+1583: function applySidebarPosition(position) {
+1584:   const mainContent = document.getElementById('main-content');
+1585:   if (!mainContent) return;
+1586: 
+1587:   if (position === 'left') {
+1588:     mainContent.classList.add('sidebar-left');
+1589:   } else {
+1590:     mainContent.classList.remove('sidebar-left');
+1591:   }
+1592:   localStorage.setItem('nebula_sidebar_pos', position);
+1593: }
+1594: 
+1595: // Configure Gemini Spark Widget display settings
+1596: function applySparkSetting(setting) {
+1597:   const newtabSpark = document.getElementById('newtab-gemini-spark');
+1598:   const centerSpark = document.getElementById('center-spark-container');
+1599: 
+1600:   if (setting === 'hidden') {
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

@@ -18,9 +18,11 @@
       "main.js",
       "preload.js",
       "gemini-preload.js",
+      "webview-preload.js",
       "renderer.js",
       "index.html",
       "style.css",
+      "neon-inject.css",
       "icon.png",
       "oauth-config.json",
       "node_modules/**/*"

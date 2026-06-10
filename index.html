@@ -94,8 +94,13 @@
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </button>
+        <button id="open-file-btn" class="nav-btn" title="Open Local File">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
           </svg>
         </button>
+        <input type="file" id="local-file-input" style="display: none;">
         <div class="header-divider"></div>
         <button id="bookmarks-menu-btn" class="nav-btn" title="Bookmarks Manager">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -108,6 +113,18 @@
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
         </button>
+        <button id="toolbar-privacy-btn" class="nav-btn" title="Toggle Privacy Mode">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </button>
+        <button id="toolbar-nuke-btn" class="nav-btn" title="Toggle Nebula Nuke Mode (No History)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2v6m0 8v6M2 12h6m8 0h6"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+          </svg>
+        </button>
         <button id="settings-btn" class="nav-btn" title="Nebula Settings">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -118,8 +135,9 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v18M3 12h18M12 3l3 3-3 3-3-3 3-3zm0 9l3 3-3 3-3-3 3-3z"/>
           </svg>
+          <span class="spark-btn-text">Screen Context</span>
         </button>
-        <button id="header-notes-btn" class="nav-btn" title="Toggle Notepad">
+        <button id="header-notes-btn" class="nav-btn" title="Toggle Nebula Notes">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -129,21 +147,71 @@
           </svg>
         </button>
       </div>
+
+      <!-- Window Controls (Minimize, Maximize, Close) -->
+      <div class="window-controls">
+        <button id="win-min-btn" class="win-btn" title="Minimize">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button id="win-max-btn" class="win-btn" title="Maximize">
+          <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="1"></rect>
+          </svg>
+        </button>
+        <button id="win-close-btn" class="win-btn win-close" title="Close">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <!-- Slide-Down Permission Request Banner -->
     <div class="permission-banner hidden" id="permission-banner">
       <div class="permission-banner-content">
-        <svg class="permission-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>
-        </svg>
-        <span id="permission-text">Website wants to access your camera</span>
+        <div class="permission-icon-wrapper">
+          <svg class="permission-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="permission-details">
+          <span id="permission-text">Website wants to access your camera</span>
+        </div>
       </div>
       <div class="permission-banner-actions">
-        <button id="permission-allow-btn" class="permission-btn allow-btn">Allow</button>
+        <!-- Unified Permission Buttons -->
+        <button id="permission-once-btn" class="permission-btn allow-btn">Only this time</button>
+        <button id="permission-session-btn" class="permission-btn allow-btn">Until closed</button>
+        <button id="permission-timed-btn" class="permission-btn allow-btn">For 5 mins</button>
+        <button id="permission-forever-btn" class="permission-btn allow-btn">Allow Forever</button>
         <button id="permission-deny-btn" class="permission-btn deny-btn">Block</button>
       </div>
     </div>
+
+    <!-- Slide-Down Password Save Banner -->
+    <div class="permission-banner hidden" id="password-save-banner">
+      <div class="permission-banner-content">
+        <div class="permission-icon-wrapper" style="background: rgba(0, 255, 255, 0.1); border-color: rgba(0, 255, 255, 0.25);">
+          <svg class="permission-icon" style="color: #00ffff;" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div class="permission-details">
+          <span id="password-save-text">Save password for this site?</span>
+        </div>
+      </div>
+      <div class="permission-banner-actions">
+        <button id="password-save-confirm-btn" class="permission-btn allow-btn">Save</button>
+        <button id="password-save-deny-btn" class="permission-btn deny-btn">Never</button>
+      </div>
+    </div>
+
+    <!-- Smart Suggestions Dropdown -->
+    <div class="suggestions-dropdown hidden" id="suggestions-dropdown"></div>
 
     <!-- Main Workspace Container -->
     <main class="main-content" id="main-content">
@@ -157,8 +225,10 @@
             </div>
             <div class="settings-menu-item active" data-sec="themes-section">Themes</div>
             <div class="settings-menu-item" data-sec="layout-section">Layout</div>
+            <div class="settings-menu-item" data-sec="privacy-section">Privacy</div>
             <div class="settings-menu-item" data-sec="bookmarks-section">Bookmarks</div>
             <div class="settings-menu-item" data-sec="history-section">History</div>
+            <div class="settings-menu-item" data-sec="credentials-section">Credentials</div>
             <div class="settings-menu-item" data-sec="about-section">About</div>
           </div>
           <div class="settings-body">
@@ -199,6 +269,25 @@
                   </select>
                 </div>
                 <div class="setting-item">
+                  <label for="header-layout-select"><strong>Header Layout:</strong></label>
+                  <select id="header-layout-select" class="layout-select">
+                    <option value="top">Top (Default)</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="floating-top">Floating Top</option>
+                    <option value="floating-bottom">Floating Bottom</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label for="floating-blur-select"><strong>Floating Toolbar Blur:</strong></label>
+                  <select id="floating-blur-select" class="layout-select">
+                    <option value="0px">None</option>
+                    <option value="6px">Low (6px)</option>
+                    <option value="12px">Medium (12px - Default)</option>
+                    <option value="24px">High (24px)</option>
+                    <option value="40px">Ultra (40px)</option>
+                  </select>
+                </div>
+                <div class="setting-item">
                   <label for="neon-toggle"><strong>Nebula Neon Mode:</strong></label>
                   <select id="neon-toggle" class="layout-select">
                     <option value="false">Off (Default)</option>
@@ -235,13 +324,39 @@
                       <input type="checkbox" id="tb-gemini" checked> Gemini Spark
                     </label>
                     <label class="checkbox-label">
-                      <input type="checkbox" id="tb-notes" checked> Notepad
+                      <input type="checkbox" id="tb-notes" checked> Nebula Notes
                     </label>
                   </div>
                 </div>
               </div>
             </div>
             
+            <!-- Privacy Settings Section -->
+            <div class="settings-section" id="privacy-section">
+              <h2>Privacy Settings</h2>
+              <p>Manage security restrictions, strict navigation, and other privacy tools.</p>
+              <div class="layout-settings-row">
+                <div class="setting-item">
+                  <label for="secure-sites-toggle"><strong>Only allow very secure sites (HTTPS):</strong></label>
+                  <select id="secure-sites-toggle" class="layout-select">
+                    <option value="false">Off (Default)</option>
+                    <option value="true">On (HTTPS Only)</option>
+                  </select>
+                </div>
+                <div class="setting-item">
+                  <label for="screen-context-toggle"><strong>Screen Context (Gemini Spark):</strong></label>
+                  <select id="screen-context-toggle" class="layout-select">
+                    <option value="true">Enabled (Default)</option>
+                    <option value="false">Disabled (Normal Toggle)</option>
+                  </select>
+                </div>
+                <div class="setting-item" style="grid-column: 1 / -1;">
+                  <label for="gemini-api-key-input"><strong>Gemini API Key (for real Spelling AI):</strong></label>
+                  <input type="password" id="gemini-api-key-input" class="layout-select" style="width: 100%; box-sizing: border-box; text-align: left; padding: 6px 12px;" placeholder="AI Studio Free API Key...">
+                </div>
+              </div>
+            </div>
+
             <!-- Bookmarks Section -->
             <div class="settings-section" id="bookmarks-section">
               <h2>Bookmarks Manager</h2>
@@ -265,6 +380,18 @@
               </div>
             </div>
 
+            <!-- Credentials Section -->
+            <div class="settings-section" id="credentials-section">
+              <h2>Saved Credentials</h2>
+              <p>Manage passwords and usernames saved automatically by Nebula Nix.</p>
+              <div class="settings-search-bar">
+                <input type="text" id="settings-credentials-search" placeholder="Search saved credentials...">
+              </div>
+              <div class="settings-list" id="settings-credentials-list">
+                <!-- Loaded Dynamically -->
+              </div>
+            </div>
+
             <!-- About Section -->
             <div class="settings-section" id="about-section">
               <h2>About Nebula Browser</h2>
@@ -276,6 +403,139 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Nebula Drive App -->
+        <div class="settings-dashboard hidden" id="nebula-drive-panel" style="padding: 24px; color: var(--text-main); display: flex; flex-direction: column; gap: 20px; height: 100%; width: 100%; overflow-y: auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <h1 style="font-family: var(--font-family-display); font-size: 26px; font-weight: 700; margin: 0; color: #00ffff; text-shadow: 0 0 8px var(--accent-glow);">Nebula Drive</h1>
+              <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 13px;">Store, manage, and view files locally in your browser.</p>
+            </div>
+            <button id="drive-add-btn" style="background: var(--accent-gradient); border: none; color: #fff; padding: 8px 18px; border-radius: 20px; font-family: var(--font-family-sans); font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 10px var(--accent-glow);">Add Files</button>
+            <input type="file" id="drive-file-input" multiple style="display: none;">
+          </div>
+          <div class="drive-dropzone" id="drive-dropzone" style="border: 2px dashed rgba(0, 255, 255, 0.3); border-radius: 12px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; background: rgba(255, 255, 255, 0.02); transition: all 0.2s;">
+            Drag & Drop files here, or click to browse
+          </div>
+          <div style="flex-grow: 1; display: flex; gap: 20px; height: 400px; min-height: 0;">
+            <div style="flex: 1; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(15, 16, 22, 0.6); display: flex; flex-direction: column; overflow: hidden;">
+              <div style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">All Files</div>
+              <div id="drive-files-list" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column;">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+            <div id="drive-viewer-container" style="flex: 1.2; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(10, 11, 15, 0.85); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+              <div style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span>File Preview</span>
+                <button id="drive-viewer-close" class="nav-btn" style="width: 22px; height: 22px; display: none;">×</button>
+              </div>
+              <div id="drive-viewer-content" style="flex-grow: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="color: var(--text-muted); text-align: center;">Select a file from the list to preview it here</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nebula Gallery App -->
+        <div class="settings-dashboard hidden" id="nebula-gallery-panel" style="padding: 24px; color: var(--text-main); display: flex; flex-direction: column; gap: 20px; height: 100%; width: 100%; overflow-y: auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <h1 style="font-family: var(--font-family-display); font-size: 26px; font-weight: 700; margin: 0; color: #a855f7; text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);">Nebula Gallery</h1>
+              <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 13px;">A gorgeous view of your stored images and media assets.</p>
+            </div>
+            <button id="gallery-add-btn" style="background: linear-gradient(135deg, #a855f7, #ec4899); border: none; color: #fff; padding: 8px 18px; border-radius: 20px; font-family: var(--font-family-sans); font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">Add Images</button>
+            <input type="file" id="gallery-file-input" multiple accept="image/*" style="display: none;">
+          </div>
+          <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; overflow-y: auto; flex-grow: 1; padding: 10px 0;">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Lightbox for Gallery -->
+        <div id="gallery-lightbox" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 5, 8, 0.95); z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+          <button id="lightbox-close" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-main); font-size: 30px; cursor: pointer; z-index: 100000;">×</button>
+          <button id="lightbox-prev" style="position: absolute; left: 20px; background: rgba(255,255,255,0.05); border: none; color: var(--text-main); width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">&lt;</button>
+          <img id="lightbox-img" style="max-width: 85%; max-height: 80%; object-fit: contain; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+          <button id="lightbox-next" style="position: absolute; right: 20px; background: rgba(255,255,255,0.05); border: none; color: var(--text-main); width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">&gt;</button>
+          <div id="lightbox-title" style="margin-top: 15px; font-size: 14px; color: var(--text-muted); font-weight: 500;">Image Title</div>
+        </div>
+
+        <!-- Nebula Passwords standalone App -->
+        <div class="settings-dashboard hidden" id="nebula-passwords-panel" style="padding: 24px; color: var(--text-main); display: flex; flex-direction: column; gap: 20px; height: 100%; width: 100%; overflow-y: auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <h1 style="font-family: var(--font-family-display); font-size: 26px; font-weight: 700; margin: 0; color: #ff9f0a; text-shadow: 0 0 8px rgba(255, 159, 10, 0.4);">Nebula Passwords</h1>
+              <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 13px;">Manage, generate, and organize your passwords securely.</p>
+            </div>
+            <button id="passwords-add-btn" style="background: linear-gradient(135deg, #ff9f0a, #ff5f56); border: none; color: #fff; padding: 8px 18px; border-radius: 20px; font-family: var(--font-family-sans); font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 0 10px rgba(255, 159, 10, 0.4);">Add Password</button>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <input type="text" id="passwords-search-input" placeholder="Search passwords..." style="flex-grow: 1; padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.03); color: var(--text-main); outline: none; transition: border-color 0.2s;">
+            <button id="password-gen-btn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-main); padding: 0 16px; border-radius: 20px; font-size: 12px; cursor: pointer;">Generate Password</button>
+          </div>
+          
+          <!-- Generator Modal -->
+          <div id="password-gen-modal" class="hidden" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: rgba(20, 21, 28, 0.95); display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-weight: 600; font-size: 14px;">Generate Strong Password</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="text" id="gen-password-result" readonly style="flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--accent-color); font-family: monospace; font-weight: bold;">
+              <button id="gen-password-copy" style="background: var(--accent-gradient); border: none; color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer;">Copy</button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+              <label>Length: <input type="number" id="gen-password-length" value="16" min="8" max="32" style="width: 50px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white; padding: 2px 6px; border-radius: 4px; text-align: center;"></label>
+              <button id="gen-password-regenerate" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">Regenerate</button>
+            </div>
+          </div>
+
+          <!-- Add/Edit Credentials Modal -->
+          <div id="password-edit-modal" class="hidden" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: rgba(20, 21, 28, 0.95); display: flex; flex-direction: column; gap: 12px;">
+            <div id="password-modal-title" style="font-weight: 600; font-size: 14px;">Add New Password</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <input type="text" id="edit-password-site" placeholder="Website Domain (e.g. google.com)" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: white;">
+              <input type="text" id="edit-password-user" placeholder="Username / Email" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: white;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="edit-password-pass" placeholder="Password" style="flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: white;">
+              <button id="edit-password-save" style="background: var(--accent-gradient); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">Save</button>
+              <button id="edit-password-cancel" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancel</button>
+            </div>
+          </div>
+
+          <div id="passwords-app-list" style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1; overflow-y: auto;">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Nebula PDF Viewer App -->
+        <div class="settings-dashboard hidden" id="nebula-pdf-panel" style="padding: 24px; color: var(--text-main); display: flex; flex-direction: column; gap: 20px; height: 100%; width: 100%; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+            <div>
+              <h1 style="font-family: var(--font-family-display); font-size: 26px; font-weight: 700; margin: 0; color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);">Nebula PDF Viewer</h1>
+              <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 13px;">Drag and drop PDF files to view them beautifully inside your browser.</p>
+            </div>
+            <button id="pdf-open-btn" style="background: linear-gradient(135deg, #4ade80, #00ffff); border: none; color: #000; padding: 8px 18px; border-radius: 20px; font-family: var(--font-family-sans); font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(74, 222, 128, 0.4);">Open PDF</button>
+            <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+          </div>
+          <div id="pdf-dropzone" style="border: 2px dashed rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; background: rgba(255, 255, 255, 0.02); transition: all 0.2s; flex-shrink: 0;">
+            Drag & Drop PDF here, or click to browse
+          </div>
+          <div id="pdf-view-frame-container" style="flex-grow: 1; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; height: 100%;">
+            <div id="pdf-empty-state" style="color: var(--text-muted); text-align: center;">No PDF loaded</div>
+            <iframe id="pdf-iframe" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+          </div>
+        </div>
+
+        <!-- Security Block Dashboard -->
+        <div class="settings-dashboard hidden" id="security-block-panel" style="background: rgba(15, 10, 25, 0.95); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; color: #ff5f56; text-align: center; padding: 40px; height: 100%; width: 100%;">
+          <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2" style="color: #ff5f56; filter: drop-shadow(0 0 10px rgba(255, 95, 86, 0.4));">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <h1 style="font-family: var(--font-family-display); font-size: 28px; font-weight: 700; text-shadow: 0 0 10px rgba(255, 95, 86, 0.4); margin: 0;">Security Shield Active</h1>
+          <p style="color: var(--text-muted); max-width: 450px; font-size: 15px; margin: 0;">Nebula has blocked connection to this site because it does not support HTTPS. Your privacy settings strictly forbid non-secure HTTP connections.</p>
+          <button id="security-return-btn" style="background: var(--accent-gradient); border: none; color: #fff; padding: 10px 24px; border-radius: 20px; font-family: var(--font-family-sans); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px var(--accent-glow);">Return to Safety</button>
         </div>
 
         <!-- New Tab Dashboard / Default View -->
@@ -308,6 +568,26 @@
                 </svg>
                 <span>Ask Gemini</span>
               </button>
+            </div>
+
+            <!-- Nebula Suite Shortcuts -->
+            <div class="nebula-suite-shortcuts" style="display: flex; gap: 16px; justify-content: center; margin: 30px 0 10px 0; flex-wrap: wrap;">
+              <div class="suite-shortcut-card" data-url="nebula://drive" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;">
+                <span style="font-size: 20px; color: #00ffff; text-shadow: 0 0 8px var(--accent-glow);">🖳</span>
+                <span style="font-weight: 500; font-size: 13px;">Drive</span>
+              </div>
+              <div class="suite-shortcut-card" data-url="nebula://gallery" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;">
+                <span style="font-size: 20px; color: #a855f7; text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);">🖼️</span>
+                <span style="font-weight: 500; font-size: 13px;">Gallery</span>
+              </div>
+              <div class="suite-shortcut-card" data-url="nebula://passwords" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;">
+                <span style="font-size: 20px; color: #ff9f0a; text-shadow: 0 0 8px rgba(255, 159, 10, 0.4);">🔑</span>
+                <span style="font-weight: 500; font-size: 13px;">Passwords</span>
+              </div>
+              <div class="suite-shortcut-card" data-url="nebula://pdf" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;">
+                <span style="font-size: 20px; color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);">📄</span>
+                <span style="font-weight: 500; font-size: 13px;">PDF Viewer</span>
+              </div>
             </div>
 
             <!-- Speed Dial Grid -->
@@ -365,6 +645,17 @@
         <!-- Resizer handle -->
         <div class="sidebar-resizer" id="sidebar-resizer"></div>
         
+        <!-- Sidebar Header (Contains Title & Collapse Button) -->
+        <div class="sidebar-header" id="sidebar-header">
+          <span class="sidebar-header-title" id="sidebar-header-title">Gemini AI</span>
+          <button id="sidebar-collapse-btn" class="sidebar-collapse-btn" title="Collapse Sidebar">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
         <div class="sidebar-content-wrapper">
           <!-- Official Gemini Web Interface -->
           <div class="sidebar-tab-content active" id="ai-panel" style="padding: 0; position: relative;">
@@ -372,8 +663,9 @@
           </div>
 
           <!-- Notes Panel -->
-          <div class="sidebar-tab-content" id="notes-panel">
-            <textarea id="notes-textarea" placeholder="Jot down research, URLs, or scripts here. Notes are automatically saved."></textarea>
+          <div class="sidebar-tab-content" id="notes-panel" style="position: relative; display: flex; flex-direction: column;">
+            <textarea id="notes-textarea" placeholder="Jot down research, URLs, or scripts here. Notes are automatically saved in Nebula Notes." style="flex-grow: 1; margin-bottom: 40px;"></textarea>
+            <button id="notes-ai-check-btn" class="nav-btn" style="width: auto; padding: 0 12px; border-radius: 15px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); font-size: 11px; font-weight: 600; color: #a855f7; display: flex; align-items: center; gap: 4px; position: absolute; bottom: 8px; right: 8px; height: 26px; cursor: pointer; transition: all 0.2s; z-index: 10;">✨ AI Spellcheck</button>
           </div>
         </div>
       </aside>
@@ -418,8 +710,6 @@
         <div class="progress-bar-fill" id="progress-bar-fill"></div>
       </div>
     </footer>
-  </div>
-
-  <script src="renderer.js"></script>
+  </div>  <script src="renderer.js"></script>
 </body>
 </html>

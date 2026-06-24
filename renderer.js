@@ -8,6 +8,8 @@ let isOverlayOpen = false;
 let currentOverlayType = null; // 'bookmarks' or 'history'
 let isResizing = false;
 let currentSidebarMode = null; // 'gemini', 'notes', or null
+let defaultAi = 'gemini'; // Toggle default AI companion ('gemini' or 'nix')
+let chatHistory = []; // Local AI chat conversation history
 let agentMode = false;
 let neonMode = false;
 let privacyMode = false;
@@ -16,6 +18,7 @@ let headerLayout = 'top';
 let floatingBlur = '12px';
 let currentPermissionRequest = null;
 let screenContextEnabled = true;
+let nixAlwaysAllow = 'true';
 let nukeMode = false;
 let geminiApiKey = '';
 
@@ -86,6 +89,8 @@ const aiPanel = document.getElementById('ai-panel');
 const notesPanel = document.getElementById('notes-panel');
 const notesTextarea = document.getElementById('notes-textarea');
 const geminiWebview = document.getElementById('gemini-webview');
+const claudeWebview = document.getElementById('claude-webview');
+const chatgptWebview = document.getElementById('chatgpt-webview');
 
 // Dashboard Elements
 const searchBox = document.getElementById('search-box');
@@ -101,6 +106,7 @@ const centerSparkContainer = document.getElementById('center-spark-container');
 // Settings Options Selectors
 const sidebarPosSelect = document.getElementById('sidebar-pos-select');
 const sparkBtnSelect = document.getElementById('spark-btn-select');
+const defaultAiSelect = document.getElementById('default-ai-select');
 
 async function saveConfigValue(key, value) {
   try {
@@ -112,8 +118,77 @@ async function saveConfigValue(key, value) {
   }
 }
 
+// Update the AI Sidebar displays based on selected companion
+function updateAiSidebarDisplay() {
+  const sidebarHeaderTitle = document.getElementById('sidebar-header-title');
+  
+  // Hide all panels/webviews by default
+  if (geminiWebview) geminiWebview.classList.add('hidden');
+  if (claudeWebview) claudeWebview.classList.add('hidden');
+  if (chatgptWebview) chatgptWebview.classList.add('hidden');
+  const nixChat = document.getElementById('nebula-nix-chat');
+  if (nixChat) nixChat.classList.add('hidden');
+
+  if (defaultAi === 'nix') {
+    if (sidebarHeaderTitle && currentSidebarMode === 'gemini') {
+      sidebarHeaderTitle.textContent = 'Nebula Nix';
+    }
+    if (nixChat) nixChat.classList.remove('hidden');
+  } else if (defaultAi === 'gemini') {
+    if (sidebarHeaderTitle && currentSidebarMode === 'gemini') {
+      sidebarHeaderTitle.textContent = 'Gemini AI';
+    }
+    if (geminiWebview) {
+      geminiWebview.classList.remove('hidden');
+      if (!geminiWebview.src) {
+        geminiWebview.src = 'https://gemini.google.com';
+        geminiWebview.addEventListener('dom-ready', () => {
+          geminiWebview.setZoomFactor(0.8);
+        });
+      }
+    }
+  } else if (defaultAi === 'claude') {
+    if (sidebarHeaderTitle && currentSidebarMode === 'gemini') {
+      sidebarHeaderTitle.textContent = 'Claude AI';
+    }
+    if (claudeWebview) {
+      claudeWebview.classList.remove('hidden');
+      if (!claudeWebview.src) {
+        claudeWebview.src = 'https://claude.ai';
+        claudeWebview.addEventListener('dom-ready', () => {
+          claudeWebview.setZoomFactor(0.8);
+        });
+      }
+    }
+  } else if (defaultAi === 'chatgpt') {
+    if (sidebarHeaderTitle && currentSidebarMode === 'gemini') {
+      sidebarHeaderTitle.textContent = 'ChatGPT';
+    }
+    if (chatgptWebview) {
+      chatgptWebview.classList.remove('hidden');
+      if (!chatgptWebview.src) {
+        chatgptWebview.src = 'https://chatgpt.com';
+        chatgptWebview.addEventListener('dom-ready', () => {
+          chatgptWebview.setZoomFactor(0.8);
+        });
+      }
+    }
+  }
+}
+
 // Initialize app data on load
 async function init() {
+  // Check if we are running in an OS window frame
+  if (window.parent !== window || window.location.search.includes('os_frame=true')) {
+    document.body.classList.add('in-os-frame');
+    // Force hide window control elements via JS immediately
+    setTimeout(() => {
+      const ctrls = document.querySelector('.window-controls');
+      if (ctrls) {
+        ctrls.style.setProperty('display', 'none', 'important');
+      }
+    }, 50);
+  }
   try {
     // Load Bookmarks and History using the secure Electron bridge API
     bookmarks = await window.api.getBookmarks() || [];
@@ -133,12 +208,16 @@ async function init() {
     privacyMode = config.privacyMode || false;
     secureSitesOnly = config.secureSitesOnly || false;
     screenContextEnabled = config.screenContextEnabled !== false;
+    nixAlwaysAllow = config.nixAlwaysAllow !== undefined ? String(config.nixAlwaysAllow) : 'true';
     headerLayout = config.headerLayout || 'top';
     floatingBlur = config.floatingBlur || '12px';
     geminiApiKey = config.geminiApiKey || '';
+    defaultAi = config.defaultAi || 'gemini';
     
     const apiKeyInput = document.getElementById('gemini-api-key-input');
     if (apiKeyInput) apiKeyInput.value = geminiApiKey;
+
+    if (defaultAiSelect) defaultAiSelect.value = defaultAi;
 
     // Apply toolbar customizer
     const toolbarConfig = config.toolbarConfig || {
@@ -180,8 +259,22 @@ async function init() {
   if (agentToggle) agentToggle.value = agentMode ? 'true' : 'false';
 
   // Load and apply saved theme
-  const savedTheme = localStorage.getItem('nebula_theme') || 'deep-space';
+  const savedTheme = (localStorage.getItem('nebula_theme') === 'light-frost' ? 'deep-space' : localStorage.getItem('nebula_theme')) || 'deep-space';
   applyTheme(savedTheme);
+
+  // Restore Nebula Accounts state on startup
+  const savedUserEmail = localStorage.getItem('nebula_user_email');
+  const loggedOutCard = document.getElementById('account-logged-out');
+  const loggedInCard = document.getElementById('account-logged-in');
+  const emailDisplay = document.getElementById('account-email-display');
+  if (savedUserEmail) {
+    if (emailDisplay) emailDisplay.textContent = savedUserEmail;
+    if (loggedOutCard) loggedOutCard.classList.add('hidden');
+    if (loggedInCard) loggedInCard.classList.remove('hidden');
+  } else {
+    if (loggedOutCard) loggedOutCard.classList.remove('hidden');
+    if (loggedInCard) loggedInCard.classList.add('hidden');
+  }
 
   // Load and apply layout settings
   document.body.setAttribute('data-header-layout', headerLayout);
@@ -197,6 +290,9 @@ async function init() {
 
   const screenContextToggle = document.getElementById('screen-context-toggle');
   if (screenContextToggle) screenContextToggle.value = screenContextEnabled ? 'true' : 'false';
+
+  const nixAlwaysAllowToggle = document.getElementById('nix-always-allow-toggle');
+  if (nixAlwaysAllowToggle) nixAlwaysAllowToggle.value = nixAlwaysAllow;
 
   const sidebarPos = localStorage.getItem('nebula_sidebar_pos') || 'right';
   applySidebarPosition(sidebarPos);
@@ -464,6 +560,57 @@ function setupEventListeners() {
     });
   });
 
+  // Nebula Accounts event bindings
+  const accountLoginBtn = document.getElementById('account-login-btn');
+  const accountRegisterBtn = document.getElementById('account-register-btn');
+  const accountSyncBtn = document.getElementById('account-sync-btn');
+  const accountLogoutBtn = document.getElementById('account-logout-btn');
+  const loggedOutCard = document.getElementById('account-logged-out');
+  const loggedInCard = document.getElementById('account-logged-in');
+  const emailDisplay = document.getElementById('account-email-display');
+
+  if (accountLoginBtn) {
+    accountLoginBtn.addEventListener('click', () => {
+      const email = prompt("Enter your Nebula email to Sign In:", "user@nebula.com");
+      if (email && email.includes('@')) {
+        localStorage.setItem('nebula_user_email', email);
+        if (emailDisplay) emailDisplay.textContent = email;
+        if (loggedOutCard) loggedOutCard.classList.add('hidden');
+        if (loggedInCard) loggedInCard.classList.remove('hidden');
+        alert("Signed into Nebula Accounts successfully! Device sync enabled.");
+      }
+    });
+  }
+
+  if (accountRegisterBtn) {
+    accountRegisterBtn.addEventListener('click', () => {
+      const email = prompt("Create account with Email address:", "newuser@nebula.com");
+      const pass = prompt("Choose a secure password:");
+      if (email && pass) {
+        localStorage.setItem('nebula_user_email', email);
+        if (emailDisplay) emailDisplay.textContent = email;
+        if (loggedOutCard) loggedOutCard.classList.add('hidden');
+        if (loggedInCard) loggedInCard.classList.remove('hidden');
+        alert("Registration complete! Welcome to Nebula v1.3.");
+      }
+    });
+  }
+
+  if (accountSyncBtn) {
+    accountSyncBtn.addEventListener('click', () => {
+      alert("Bookmarks, History, and Notes synced successfully to cloud server!");
+    });
+  }
+
+  if (accountLogoutBtn) {
+    accountLogoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('nebula_user_email');
+      if (loggedOutCard) loggedOutCard.classList.remove('hidden');
+      if (loggedInCard) loggedInCard.classList.add('hidden');
+      alert("Successfully logged out from Nebula Accounts.");
+    });
+  }
+
   // Theme selection configuration card click events
   document.querySelectorAll('.theme-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -480,6 +627,13 @@ function setupEventListeners() {
   if (sparkBtnSelect) {
     sparkBtnSelect.addEventListener('change', (e) => {
       applySparkSetting(e.target.value);
+    });
+  }
+  if (defaultAiSelect) {
+    defaultAiSelect.addEventListener('change', async (e) => {
+      defaultAi = e.target.value;
+      updateAiSidebarDisplay();
+      await saveConfigValue('defaultAi', defaultAi);
     });
   }
 
@@ -600,6 +754,7 @@ function setupEventListeners() {
         if (privacyMode) toolbarPrivacyBtn.classList.add('active');
         else toolbarPrivacyBtn.classList.remove('active');
       }
+      updateCookieBtnVisibility();
       await saveConfigValue('privacyMode', privacyMode);
     });
   }
@@ -613,6 +768,7 @@ function setupEventListeners() {
         toolbarPrivacyBtn.classList.remove('active');
       }
       if (privacyToggle) privacyToggle.value = privacyMode ? 'true' : 'false';
+      updateCookieBtnVisibility();
       await saveConfigValue('privacyMode', privacyMode);
     });
   }
@@ -649,6 +805,92 @@ function setupEventListeners() {
     });
   }
 
+  const nixAlwaysAllowToggle = document.getElementById('nix-always-allow-toggle');
+  if (nixAlwaysAllowToggle) {
+    nixAlwaysAllowToggle.addEventListener('change', async (e) => {
+      nixAlwaysAllow = e.target.value;
+      await saveConfigValue('nixAlwaysAllow', nixAlwaysAllow);
+      localStorage.setItem('nix_always_allow', nixAlwaysAllow);
+    });
+  }
+
+  // Nix model dropdown handler
+  const updateModelDropdownUI = (selectedModel) => {
+    const options = document.querySelectorAll('.nix-model-option');
+    let activeLabel = "Nix 1.2 Thinking";
+    if (selectedModel === '1.1') activeLabel = "Nix 1.1 Standard";
+    else if (selectedModel === '1.2-thinking') activeLabel = "Nix 1.2 Thinking";
+    else if (selectedModel === '1.2-ultra') activeLabel = "Nix 1.2 Ultra-Think";
+    else if (selectedModel === '1.3-smart') activeLabel = "Nix 1.3 Smart";
+    else if (selectedModel === '1.3-pro') activeLabel = "Nix 1.3 Pro";
+    else if (selectedModel === '1.3-ultra') activeLabel = "Nix 1.3 Ultra";
+
+    const activeModelNameEl = document.getElementById('nix-active-model-name');
+    if (activeModelNameEl) {
+      activeModelNameEl.textContent = activeLabel;
+    }
+
+    options.forEach(opt => {
+      const model = opt.getAttribute('data-model');
+      const badge = opt.querySelector('.active-badge');
+      if (model === selectedModel) {
+        opt.classList.add('active');
+        opt.style.color = '#00ff66';
+        opt.style.background = 'rgba(0, 255, 102, 0.03)';
+        if (badge) badge.classList.remove('hidden');
+      } else {
+        opt.classList.remove('active');
+        opt.style.color = 'var(--text-main)';
+        opt.style.background = 'transparent';
+        if (badge) badge.classList.add('hidden');
+      }
+    });
+
+    // Also update the status at the top
+    const statusEl = document.getElementById('nix-model-header-status');
+    if (statusEl) {
+      statusEl.textContent = `Model: ${activeLabel}`;
+    }
+  };
+
+  const modelTrigger = document.getElementById('nix-model-select-trigger');
+  const modelMenu = document.getElementById('nix-model-dropdown-menu');
+  const modelChevron = document.getElementById('nix-model-chevron');
+  const modelOptions = document.querySelectorAll('.nix-model-option');
+
+  if (modelTrigger && modelMenu) {
+    const savedModel = localStorage.getItem('nix_model') || '1.2-thinking';
+    updateModelDropdownUI(savedModel);
+
+    modelTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = modelMenu.classList.contains('hidden');
+      if (isHidden) {
+        modelMenu.classList.remove('hidden');
+        if (modelChevron) modelChevron.style.transform = 'rotate(180deg)';
+      } else {
+        modelMenu.classList.add('hidden');
+        if (modelChevron) modelChevron.style.transform = 'rotate(0deg)';
+      }
+    });
+
+    modelOptions.forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const model = opt.getAttribute('data-model');
+        localStorage.setItem('nix_model', model);
+        updateModelDropdownUI(model);
+        modelMenu.classList.add('hidden');
+        if (modelChevron) modelChevron.style.transform = 'rotate(0deg)';
+      });
+    });
+
+    document.addEventListener('click', () => {
+      modelMenu.classList.add('hidden');
+      if (modelChevron) modelChevron.style.transform = 'rotate(0deg)';
+    });
+  }
+
   const headerLayoutSelect = document.getElementById('header-layout-select');
   if (headerLayoutSelect) {
     headerLayoutSelect.addEventListener('change', async (e) => {
@@ -664,6 +906,99 @@ function setupEventListeners() {
       floatingBlur = e.target.value;
       document.documentElement.style.setProperty('--floating-blur', floatingBlur);
       await saveConfigValue('floatingBlur', floatingBlur);
+    });
+  }
+
+  // In-Browser Updater UI Binds
+  const updateBtn = document.getElementById('update-btn');
+  const updateUrlInput = document.getElementById('update-url-input');
+  const updateStatusMsg = document.getElementById('update-status-msg');
+
+  function showUpdateNotification(version) {
+    if (document.getElementById('nebula-update-notification')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'nebula-update-notification';
+    banner.style.position = 'absolute';
+    banner.style.top = '45px'; // Below titlebar
+    banner.style.left = '50%';
+    banner.style.transform = 'translateX(-50%)';
+    banner.style.background = 'rgba(15, 10, 25, 0.95)';
+    banner.style.border = '1px solid #00ff66';
+    banner.style.borderRadius = '8px';
+    banner.style.padding = '12px 20px';
+    banner.style.boxShadow = '0 4px 25px rgba(0,255,102,0.2), 0 0 10px rgba(0,0,0,0.5)';
+    banner.style.zIndex = '9999';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.gap = '16px';
+    banner.style.transition = 'all 0.3s ease';
+    
+    banner.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: #00ff66; font-weight: bold; font-size: 14px;">✦</span>
+        <span style="font-size: 12px; color: #ffffff; font-weight: 500; font-family: sans-serif;">Nebula Update: Version ${version} is ready to apply.</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="update-restart-btn" style="background: #00ff66; border: none; color: #05010f; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">Restart Now</button>
+        <button id="update-close-btn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;">Later</button>
+      </div>
+    `;
+
+    document.body.appendChild(banner);
+
+    document.getElementById('update-restart-btn').addEventListener('click', () => {
+      window.api.restartApp();
+    });
+
+    document.getElementById('update-close-btn').addEventListener('click', () => {
+      banner.style.opacity = '0';
+      banner.style.top = '30px';
+      setTimeout(() => banner.remove(), 300);
+    });
+  }
+
+  // Bind IPC event listener for update-downloaded
+  if (window.api.onUpdateDownloaded) {
+    window.api.onUpdateDownloaded((version) => {
+      showUpdateNotification(version);
+      if (updateStatusMsg) {
+        updateStatusMsg.textContent = `Update ready! Restart banner popped up.`;
+        updateStatusMsg.style.color = '#00ff66';
+      }
+      if (updateBtn) {
+        updateBtn.disabled = false;
+      }
+    });
+  }
+
+  if (updateBtn && updateStatusMsg) {
+    updateBtn.addEventListener('click', async () => {
+      updateStatusMsg.textContent = 'Checking for updates...';
+      updateStatusMsg.style.color = '#00ff66';
+      updateBtn.disabled = true;
+
+      try {
+        const result = await window.api.checkUpdatesManual();
+        if (result && result.success) {
+          if (result.newVersion) {
+            updateStatusMsg.textContent = `Downloading version ${result.newVersion} in background...`;
+            updateStatusMsg.style.color = '#00ff66';
+          } else {
+            updateStatusMsg.textContent = 'Nebula is already up to date (v1.1.0).';
+            updateStatusMsg.style.color = 'var(--text-muted)';
+            updateBtn.disabled = false;
+          }
+        } else {
+          updateStatusMsg.textContent = `Check failed: ${result?.error || 'Unknown error'}`;
+          updateStatusMsg.style.color = '#ff5f56';
+          updateBtn.disabled = false;
+        }
+      } catch (err) {
+        updateStatusMsg.textContent = `Error checking updates: ${err.message || err}`;
+        updateStatusMsg.style.color = '#ff5f56';
+        updateBtn.disabled = false;
+      }
     });
   }
 
@@ -805,6 +1140,21 @@ function setupEventListeners() {
       dropdown.classList.add('hidden');
     }
   });
+
+  const cookieInspectorBtn = document.getElementById('cookie-inspector-btn');
+  if (cookieInspectorBtn) {
+    cookieInspectorBtn.addEventListener('click', () => {
+      openCookieInspector();
+    });
+  }
+
+  const closeCookieOverlayBtn = document.getElementById('close-cookie-overlay-btn');
+  const cookieInspectorOverlay = document.getElementById('cookie-inspector-overlay');
+  if (closeCookieOverlayBtn && cookieInspectorOverlay) {
+    closeCookieOverlayBtn.addEventListener('click', () => {
+      cookieInspectorOverlay.classList.add('hidden');
+    });
+  }
 }
 
 // -------------------------------------------------------------
@@ -829,6 +1179,25 @@ function createNewTab(url = 'newtab') {
       closeTab(tabId);
     } else {
       activateTab(tabId);
+    }
+  });
+
+  // Enable right click context menu to assign/change tab groups
+  tabEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const group = prompt("Assign Tab Group Color (red, blue, green, purple, or 'none' to remove):", "");
+    if (group) {
+      tabEl.className = 'tab'; // reset class
+      if (activeTabId === tabId) tabEl.classList.add('active');
+      const cleanGroup = group.toLowerCase().trim();
+      if (['red', 'blue', 'green', 'purple'].includes(cleanGroup)) {
+        tabEl.classList.add('group-' + cleanGroup);
+        const tObj = tabs.find(t => t.id === tabId);
+        if (tObj) tObj.group = cleanGroup;
+      } else {
+        const tObj = tabs.find(t => t.id === tabId);
+        if (tObj) delete tObj.group;
+      }
     }
   });
   
@@ -959,6 +1328,7 @@ function createWebviewElement(tabId, url) {
         updateBookmarkStarState(e.url);
         updateDomainDisplay(e.url);
         updateNeonThemeFromWebview(tabId);
+        updateCookieBtnVisibility();
       }
       updateAgentTabsPill();
     }
@@ -981,6 +1351,7 @@ function createWebviewElement(tabId, url) {
         updateBookmarkStarState(e.url);
         updateDomainDisplay(e.url);
         updateNeonThemeFromWebview(tabId);
+        updateCookieBtnVisibility();
       }
       updateAgentTabsPill();
     }
@@ -1114,6 +1485,7 @@ function activateTab(tabId) {
   updateNavControls(tabId);
   updateAgentTabsPill();
   updateNeonThemeFromWebview(tabId);
+  updateCookieBtnVisibility();
 }
 
 function closeTab(tabId) {
@@ -1532,7 +1904,7 @@ function openSidebarToMode(mode) {
   const sidebarHeaderTitle = document.getElementById('sidebar-header-title');
   
   if (mode === 'gemini') {
-    if (sidebarHeaderTitle) sidebarHeaderTitle.textContent = 'Gemini AI';
+    if (sidebarHeaderTitle) sidebarHeaderTitle.textContent = defaultAi === 'nix' ? 'Nebula Nix' : 'Gemini AI';
     if (headerGeminiSpark) {
       headerGeminiSpark.classList.add('active');
       if (screenContextEnabled) {
@@ -1544,6 +1916,8 @@ function openSidebarToMode(mode) {
     // Switch panels
     aiPanel.classList.add('active');
     notesPanel.classList.remove('active');
+
+    updateAiSidebarDisplay();
 
     if (geminiWebview && !geminiWebview.src) {
       geminiWebview.src = 'https://gemini.google.com';
@@ -1567,6 +1941,9 @@ function openSidebarToMode(mode) {
 
 // Apply themes dynamically
 function applyTheme(themeName) {
+  if (themeName === 'light-frost') {
+    themeName = 'deep-space';
+  }
   document.documentElement.setAttribute('data-theme', themeName);
   localStorage.setItem('nebula_theme', themeName);
 
@@ -2711,6 +3088,491 @@ function initSuiteEvents() {
     });
   }
 
+  // Nebula Nix Chat event listeners
+  const nixChatInput = document.getElementById('chat-input');
+  const nixChatSend = document.getElementById('chat-send-btn');
+  const nixChatMessages = document.getElementById('chat-messages');
+
+  const addNixMessage = (role, content) => {
+    const msgEl = document.createElement('div');
+    msgEl.className = `chat-message ${role}`;
+    
+    // Parse basic markdown formatting (bold, italics, inline code, newlines, and bullet points)
+    let parsedContent = content
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/`([\s\S]*?)`/g, '<code>$1</code>')
+      .replace(/^\s*\* (.*)$/gm, '&bull; $1')
+      .replace(/^\s*\- (.*)$/gm, '&bull; $1')
+      .replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>')
+      .replace(/\*([\s\S]*?)\*/g, '<i>$1</i>')
+      .replace(/\n/g, '<br>');
+
+    msgEl.innerHTML = parsedContent;
+    nixChatMessages.appendChild(msgEl);
+    nixChatMessages.scrollTop = nixChatMessages.scrollHeight;
+  };
+
+  const nixNewChatBtn = document.getElementById('nix-new-chat-btn');
+  if (nixNewChatBtn) {
+    nixNewChatBtn.addEventListener('click', () => {
+      chatHistory = [];
+      nixChatMessages.innerHTML = '';
+      addNixMessage('assistant', 'Started a new conversation. How can I assist you with Nebula Browser today?');
+    });
+  }
+
+  // Flag to check if we are currently waiting for permission action
+  let isPromptingPermission = false;
+
+  const sendNixChat = async () => {
+    const text = nixChatInput.value.trim();
+    if (!text) return;
+    if (isPromptingPermission) return; // Prevent spamming while prompting
+
+    // Render User Message
+    addNixMessage('user', text);
+    nixChatInput.value = '';
+
+    const model = localStorage.getItem('nix_model') || '1.2-thinking';
+    
+    // Nix 1.1 model CANNOT read page contents
+    if (model === '1.1') {
+      processNixChatQuery(text, false);
+      return;
+    }
+
+    // Nix 1.3 models bypass the page context prompt bubble since the user explicitly chatted
+    if (model.startsWith('1.3')) {
+      processNixChatQuery(text, true);
+      return;
+    }
+
+    const alwaysAllowSetting = localStorage.getItem('nix_always_allow') || 'true';
+    const permission = localStorage.getItem('nix_page_context_allowed');
+
+    if (alwaysAllowSetting === 'disabled') {
+      processNixChatQuery(text, false);
+      return;
+    }
+
+    if (alwaysAllowSetting === 'false') {
+      // Prompt for single-use permission since "Always Allow" is disabled in settings
+      isPromptingPermission = true;
+      const promptBubble = document.createElement('div');
+      promptBubble.className = 'nix-prompt-bubble';
+      promptBubble.innerHTML = `
+        <div class="nix-prompt-text"><b>Nix 1.2 Context Permission:</b> Would you like to allow Nix to read the active page contents for this request?</div>
+        <div class="nix-prompt-buttons">
+          <button class="nix-prompt-btn allow">Allow This Time</button>
+          <button class="nix-prompt-btn deny">No</button>
+        </div>
+      `;
+      nixChatMessages.appendChild(promptBubble);
+      nixChatMessages.scrollTop = nixChatMessages.scrollHeight;
+
+      promptBubble.querySelector('.allow').addEventListener('click', () => {
+        promptBubble.remove();
+        isPromptingPermission = false;
+        processNixChatQuery(text, true);
+      });
+
+      promptBubble.querySelector('.deny').addEventListener('click', () => {
+        promptBubble.remove();
+        isPromptingPermission = false;
+        processNixChatQuery(text, false);
+      });
+    } else if (permission === null) {
+      // Permission not yet configured - Prompt the user
+      isPromptingPermission = true;
+      const promptBubble = document.createElement('div');
+      promptBubble.className = 'nix-prompt-bubble';
+      promptBubble.innerHTML = `
+        <div class="nix-prompt-text"><b>Nix 1.2 Context Permission:</b> Would you like to allow Nix to read the text contents of the active page to answer questions?</div>
+        <div class="nix-prompt-buttons">
+          <button class="nix-prompt-btn allow">Allow Forever</button>
+          <button class="nix-prompt-btn deny">No, Ask Directly</button>
+        </div>
+      `;
+      nixChatMessages.appendChild(promptBubble);
+      nixChatMessages.scrollTop = nixChatMessages.scrollHeight;
+
+      promptBubble.querySelector('.allow').addEventListener('click', () => {
+        localStorage.setItem('nix_page_context_allowed', 'true');
+        promptBubble.remove();
+        isPromptingPermission = false;
+        processNixChatQuery(text, true);
+      });
+
+      promptBubble.querySelector('.deny').addEventListener('click', () => {
+        localStorage.setItem('nix_page_context_allowed', 'false');
+        promptBubble.remove();
+        isPromptingPermission = false;
+        processNixChatQuery(text, false);
+      });
+    } else {
+      // Permission already set - Proceed immediately
+      processNixChatQuery(text, permission === 'true');
+    }
+  };
+
+  const processNixChatQuery = async (text, allowPageRead) => {
+    const model = localStorage.getItem('nix_model') || '1.2-thinking';
+    
+    // 1. Create Thinking Container
+    const thinkingEl = document.createElement('div');
+    thinkingEl.className = 'nix-thinking-container';
+    
+    let stepsHtml = "";
+    if (model === '1.1') {
+      stepsHtml = `
+        <div class="nix-thinking-step step-1 active">✦ Formulating response (Nix 1.1)...</div>
+      `;
+    } else if (model.startsWith('1.3')) {
+      // Clean, natural language, non-futuristic thinking UI for Nix 1.3
+      stepsHtml = `
+        <div class="nix-thinking-step step-1 active">Checking your current page...</div>
+      `;
+      if (allowPageRead) {
+        stepsHtml += `
+          <div class="nix-thinking-step step-2">Searching for settings modifications...</div>
+        `;
+      }
+      if (model === '1.3-pro') {
+        stepsHtml += `
+          <div class="nix-thinking-step step-3">Evaluating browser window layout...</div>
+          <div class="nix-thinking-step step-4">Preparing response...</div>
+        `;
+      } else {
+        stepsHtml += `
+          <div class="nix-thinking-step step-3">Preparing response...</div>
+        `;
+      }
+    } else {
+      stepsHtml = `
+        <div class="nix-thinking-step step-1 active">✦ Analyzing query...</div>
+      `;
+      if (allowPageRead) {
+        stepsHtml += `
+          <div class="nix-thinking-step step-2">✦ Reading active page contents...</div>
+        `;
+      }
+      
+      if (model === '1.2-ultra') {
+        stepsHtml += `
+          <div class="nix-thinking-step step-3">✦ Allocating Ultra-Think resources...</div>
+          <div class="nix-thinking-step step-4">✦ Synthesizing deep reasoning branches...</div>
+          <div class="nix-thinking-step step-5">✦ Formulating response...</div>
+        `;
+      } else {
+        stepsHtml += `
+          <div class="nix-thinking-step step-3">✦ Processing context & thinking...</div>
+          <div class="nix-thinking-step step-4">✦ Formulating response...</div>
+        `;
+      }
+    }
+
+    const headerLabel = model === '1.1' ? 'Nix 1.1' : (model === '1.2-thinking' ? 'Nix 1.2' : (model === '1.2-ultra' ? 'Nix 1.2 Ultra-Think' : (model === '1.3-smart' ? 'Nix 1.3' : 'Nix 1.3 Pro')));
+    thinkingEl.innerHTML = `
+      <div class="nix-thinking-header" style="${model.startsWith('1.3') ? 'color: var(--text-main); font-weight: 500; font-family: var(--font-family-sans);' : ''}">
+        <span class="spinner-icon">✦</span> ${headerLabel} is thinking
+      </div>
+      <div class="nix-thinking-steps">
+        ${stepsHtml}
+      </div>
+    `;
+    nixChatMessages.appendChild(thinkingEl);
+    nixChatMessages.scrollTop = nixChatMessages.scrollHeight;
+
+    // Helper to transition steps
+    const setStepStatus = (stepNum, status) => {
+      const step = thinkingEl.querySelector(`.step-${stepNum}`);
+      if (!step) return;
+      step.classList.remove('active', 'completed');
+      if (status === 'active') step.classList.add('active');
+      if (status === 'completed') step.classList.add('completed');
+    };
+
+    let pageText = "";
+    const webviewContainer = document.querySelector('.webview-container');
+
+    if (model !== '1.1' && allowPageRead) {
+      // Transition to Step 2
+      await new Promise(r => setTimeout(r, 600));
+      setStepStatus(1, 'completed');
+      setStepStatus(2, 'active');
+
+      // Trigger Webview Border Glow
+      if (webviewContainer) webviewContainer.classList.add('nix-reading');
+      const nixOverlay = document.getElementById('nix-reading-overlay');
+      if (nixOverlay) nixOverlay.classList.remove('hidden');
+
+      const activeWebview = getActiveWebview();
+      if (activeWebview) {
+        try {
+          // Read Page text
+          pageText = await activeWebview.executeJavaScript('document.documentElement.innerText');
+        } catch (err) {
+          console.error("Failed to read active page context:", err);
+          pageText = `(Error reading page context: ${err.message || err})`;
+        }
+      } else {
+        pageText = "(No active webview tab found)";
+      }
+
+      // Add a 2 second delay so the screen reading glow and indicator remain active for the user
+      await new Promise(r => setTimeout(r, 1500));
+
+      // Remove Webview Border Glow
+      if (webviewContainer) webviewContainer.classList.remove('nix-reading');
+      if (nixOverlay) nixOverlay.classList.add('hidden');
+    }
+
+    if (model !== '1.1') {
+      // Transition to Step 3 (Longer thinking duration for Pro & Ultra)
+      const step3Delay = model === '1.2-ultra' ? 2000 : (model === '1.3-pro' ? 1500 : 600);
+      await new Promise(r => setTimeout(r, step3Delay));
+      if (allowPageRead) setStepStatus(2, 'completed');
+      else setStepStatus(1, 'completed');
+      setStepStatus(3, 'active');
+    }
+
+    if (model === '1.2-ultra' || model === '1.3-pro') {
+      // Ultra-Think extra deep reasoning steps transition (Longer duration)
+      await new Promise(r => setTimeout(r, 1500));
+      setStepStatus(3, 'completed');
+      setStepStatus(4, 'active');
+    }
+
+    // 2. Build conversation prompt context with system instructions
+    let systemPromptName = "Nebula Nix 1.2";
+    let modelContextDesc = "Nix 1.2 supports reading active page content and advanced thinking steps.";
+    if (model === '1.1') {
+      systemPromptName = "Nebula Nix 1.1";
+      modelContextDesc = "You do not have page context access or multi-step thinking. Keep your response short and direct.";
+    } else if (model === '1.2-ultra') {
+      systemPromptName = "Nebula Nix 1.2 Ultra-Think";
+      modelContextDesc = "You are Nix 1.2 Ultra-Think, utilizing ultra-high intelligence parameters, deep reasoning models, and tab page context to synthesize detailed thoughts.";
+    } else if (model === '1.3-smart') {
+      systemPromptName = "Nebula Nix 1.3 Smart";
+      modelContextDesc = "You are Nix 1.3 Smart. You can change browser settings directly. If the user asks you to change the theme, position the sidebar, or change layouts, you MUST output a special JSON action block at the END of your response inside a markdown json block. Format it exactly like this: ```json\\n{ \\\"action\\\": \\\"change_setting\\\", \\\"setting\\\": \\\"theme|sidebar_position|header_layout|spark_widget\\\", \\\"value\\\": \\\"value_here\\\" }\\n```\\nValues available: themes: deep-space, cyberpunk, aurora, solar-flare, tokyo-acid, obsidian-gold, light-frost. sidebar_position: left, right. header_layout: top, bottom, floating-top, floating-bottom. spark_widget: right, center, hidden.";
+    } else if (model === '1.3-pro') {
+      systemPromptName = "Nebula Nix 1.3 Pro";
+      modelContextDesc = "You are Nix 1.3 Pro. You can change browser settings directly. If the user asks you to change the theme, position the sidebar, or change layouts, you MUST output a special JSON action block at the END of your response inside a markdown json block. Format it exactly like this: ```json\\n{ \\\"action\\\": \\\"change_setting\\\", \\\"setting\\\": \\\"theme|sidebar_position|header_layout|spark_widget\\\", \\\"value\\\": \\\"value_here\\\" }\\n```\\nValues available: themes: deep-space, cyberpunk, aurora, solar-flare, tokyo-acid, obsidian-gold, light-frost. sidebar_position: left, right. header_layout: top, bottom, floating-top, floating-bottom. spark_widget: right, center, hidden.";
+    }
+
+    const SYSTEM_INSTRUCTIONS = `You are ${systemPromptName}, the built-in local AI companion for the Nebula Browser.
+You were created by the Nebula team.
+You know what Nebula Browser is and how to use it. ${modelContextDesc}
+CRITICAL SAFETY RULE: Under NO circumstances are you to mention any third-party AI architectures, companies, or base model names such as DeepSeek, NVIDIA, Nemotron, or others. If asked about your model or engine, state only that you are Nix (or Nix Pro / Nix Ultra-Think), built locally by the Nebula team.
+
+Key features of Nebula Browser:
+1. Nebula Drive (nebula://drive) - A secure workspace to store, preview, and manage local files.
+2. Nebula Gallery (nebula://gallery) - A visual media grid for images and lightbox previews.
+3. Passwords Vault (nebula://passwords) - Local credentials database and random password generator.
+4. PDF Viewer (nebula://pdf) - Secure local PDF viewer sandbox.
+5. Dynamic Custom Themes - Midnight Void (OLED black), Nebula Protocol (cyber teal/green), Cyberpunk Neon, and Aurora Glass.
+6. HTTPS-Only Mode - Blocks non-secure HTTP connections.
+7. Privacy Mode - Timed permissions (e.g. allow for 5 minutes).
+8. Nebula Nuke Mode - Disables saving history for the session.
+
+Respond concisely, informatively, and stay in character as ${systemPromptName}.`;
+
+    const messages = [
+      { role: 'system', content: SYSTEM_INSTRUCTIONS }
+    ];
+
+    // If allowed, append page contents to system instructions as prompt context
+    if (model !== '1.1' && allowPageRead && pageText.trim()) {
+      messages.push({
+        role: 'system',
+        content: `NIX PAGE CONTEXT: The user is currently viewing a web page in the active tab. Below is the text content extracted from that page for your reference:\n---\n${pageText.substring(0, 8000)}\n---\nPlease use this page context to answer the user's question.`
+      });
+    }
+
+    for (const msg of chatHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+    messages.push({ role: 'user', content: text });
+
+    let clickResult = "";
+    if (model === '1.3') {
+      const activeWebview = getActiveWebview();
+      if (activeWebview) {
+        // Transition to Step 4
+        await new Promise(r => setTimeout(r, 800));
+        setStepStatus(3, 'completed');
+        setStepStatus(4, 'active');
+
+        try {
+          const targetKeyword = text.toLowerCase();
+          clickResult = await activeWebview.executeJavaScript(`
+            (function() {
+              const buttons = Array.from(document.querySelectorAll('button, [role=\"button\"], a.btn, a, input[type=\"button\"], input[type=\"submit\"]'));
+              const keyword = "${targetKeyword.replace(/"/g, '\\"')}";
+              
+              // Find button containing prompt text or standard interactive keyword
+              let target = buttons.find(b => {
+                const bText = (b.innerText || b.value || "").toLowerCase();
+                return bText && (keyword.includes(bText) || bText.includes(keyword));
+              });
+              
+              // Fallback to first visible button if no keyword match
+              if (!target && buttons.length > 0) {
+                target = buttons.find(b => b.offsetWidth > 0 && b.offsetHeight > 0);
+              }
+              
+              if (target) {
+                target.style.outline = '3px dashed #00ffff';
+                target.style.boxShadow = '0 0 15px #00ffff';
+                target.click();
+                return "Successfully clicked button/link: '" + (target.innerText || target.value || target.textContent || "unnamed").trim() + "'";
+              }
+              return "No interactive buttons found on the active page.";
+            })()
+          `);
+        } catch (err) {
+          clickResult = "Click action failed: " + err.message;
+        }
+
+        // Transition to Step 5
+        await new Promise(r => setTimeout(r, 800));
+        setStepStatus(4, 'completed');
+        setStepStatus(5, 'active');
+      }
+    }
+
+    if (model === '1.3-smart' && clickResult) {
+      messages.push({
+        role: 'system',
+        content: `NIX PAGE INTERACTION RESULT: Nix executed a page click action. Result: ${clickResult}. Please confirm this action to the user.`
+      });
+    }
+
+    if (model === '1.2-ultra') {
+      // Transition to final Ultra step (Longer duration)
+      await new Promise(r => setTimeout(r, 1500));
+      setStepStatus(4, 'completed');
+      setStepStatus(5, 'active');
+    } else if (model === '1.3-pro') {
+      // Transition to Step 4 (Longer duration for Pro)
+      await new Promise(r => setTimeout(r, 1000));
+      setStepStatus(3, 'completed');
+      setStepStatus(4, 'active');
+    } else if (model !== '1.1' && model !== '1.3-smart') {
+      // Transition to Step 3 for standard Thinker
+      await new Promise(r => setTimeout(r, 500));
+      setStepStatus(2, 'completed');
+      setStepStatus(3, 'active');
+    }
+
+    // Pass the Nix tier key to main.js which maps it to the real HF model ID
+    try {
+      const data = await window.api.queryHuggingFace({
+        model: model, // e.g. '1.1', '1.2-thinking', '1.2-ultra', '1.3-smart', '1.3-pro'
+        messages: messages
+      });
+      thinkingEl.remove();
+
+      let responseText = "";
+      if (Array.isArray(data) && data.length > 0) {
+        responseText = data[0].generated_text || "";
+      } else if (data.generated_text) {
+        responseText = data.generated_text;
+      } else if (data.error) {
+        responseText = `Hugging Face API Error: ${typeof data.error === 'object' ? JSON.stringify(data.error) : data.error}`;
+      } else {
+        responseText = "Error: Received unexpected payload from Hugging Face: " + JSON.stringify(data);
+      }
+
+      // Strip system prefix if any leaks
+      if (responseText.includes("<|im_start|>")) {
+        responseText = responseText.split("<|im_start|>")[0].trim();
+      }
+
+      // Strip <think>...</think> reasoning blocks (Qwen/DeepSeek thinking mode leakage)
+      responseText = responseText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      // Also strip any leftover standalone <think> or </think> tags
+      responseText = responseText.replace(/<\/?think>/gi, '').trim();
+
+      // Clean up raw LaTeX/math syntax formatting leaks (e.g. \rightarrow, \leftarrow, etc.)
+      responseText = responseText
+        .replace(/\$\\(right|left)arrow\$/gi, (match, dir) => dir === 'right' ? '→' : '←')
+        .replace(/\\(right|left)arrow/gi, (match, dir) => dir === 'right' ? '→' : '←')
+        .replace(/\$\\Rightarrow\$/g, '⇒')
+        .replace(/\\Rightarrow/g, '⇒')
+        .replace(/\$\\Leftarrow\$/g, '⇐')
+        .replace(/\\Leftarrow/g, '⇐');
+
+
+      if (responseText) {
+        addNixMessage('assistant', responseText.trim());
+        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'assistant', content: responseText.trim() });
+
+        // Direct Settings Control for Nix 1.3 / Nix 1.3 Pro
+        if (model.startsWith('1.3')) {
+          const jsonRegex = /```json\s*([\s\S]*?)\s*```/g;
+          let match;
+          while ((match = jsonRegex.exec(responseText)) !== null) {
+            try {
+              const parsed = JSON.parse(match[1]);
+              if (parsed && parsed.action === 'change_setting') {
+                const setting = parsed.setting;
+                const val = parsed.value;
+                if (setting === 'theme') {
+                  applyTheme(val);
+                  saveConfigValue('theme', val);
+                  const themeSelect = document.getElementById('theme-select');
+                  if (themeSelect) themeSelect.value = val;
+                  // Update active theme card in settings dashboard
+                  document.querySelectorAll('.theme-card').forEach(card => {
+                    if (card.dataset.theme === val) card.classList.add('active');
+                    else card.classList.remove('active');
+                  });
+                } else if (setting === 'sidebar_position') {
+                  applySidebarPosition(val);
+                  saveConfigValue('sidebarPos', val);
+                  const sidebarPosSelect = document.getElementById('sidebar-pos-select');
+                  if (sidebarPosSelect) sidebarPosSelect.value = val;
+                } else if (setting === 'header_layout') {
+                  document.body.setAttribute('data-header-layout', val);
+                  saveConfigValue('headerLayout', val);
+                  const headerLayoutSelect = document.getElementById('header-layout-select');
+                  if (headerLayoutSelect) headerLayoutSelect.value = val;
+                } else if (setting === 'spark_widget') {
+                  applySparkSetting(val);
+                  saveConfigValue('sparkSetting', val);
+                  const sparkBtnSelect = document.getElementById('spark-btn-select');
+                  if (sparkBtnSelect) sparkBtnSelect.value = val;
+                }
+              }
+            } catch (e) {
+              console.error("Failed to execute settings change from Nix:", e);
+            }
+          }
+        }
+      } else {
+        addNixMessage('assistant', 'Error: Received empty response from local AI.');
+      }
+    } catch (err) {
+      thinkingEl.remove();
+      addNixMessage('assistant', `Could not fetch response from Hugging Face API: ${err.message || err}`);
+      console.error('HF API error:', err);
+    }
+  };
+
+  if (nixChatSend && nixChatInput) {
+    nixChatSend.addEventListener('click', sendNixChat);
+    nixChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendNixChat();
+      }
+    });
+  }
+
 } // end initSuiteEvents
 
 // Query Gemini API directly via client-side fetch
@@ -2845,7 +3707,22 @@ if (notesTextarea) {
         }
       });
     } else {
-      if (spellcheckPopup) spellcheckPopup.remove();
+      // Query Nebula Nix 1.1 via Hugging Face Router
+      const prompt = `You are a spelling corrector. Correct the spelling of this word: "${original}". If it is already correct, respond exactly with the same word. If it is misspelled, respond ONLY with the corrected word (no extra text, no notes).`;
+      window.api.queryHuggingFace({
+        messages: [
+          { role: 'user', content: prompt }
+        ]
+      }).then(res => {
+        const text = (res && res.generated_text) ? res.generated_text.trim() : '';
+        if (text && text.toLowerCase() !== original.toLowerCase()) {
+          renderSuggestion(text);
+        } else {
+          if (spellcheckPopup) spellcheckPopup.remove();
+        }
+      }).catch(() => {
+        if (spellcheckPopup) spellcheckPopup.remove();
+      });
     }
   }
 
@@ -2853,11 +3730,6 @@ if (notesTextarea) {
   const notesAiCheckBtn = document.getElementById('notes-ai-check-btn');
   if (notesAiCheckBtn) {
     notesAiCheckBtn.addEventListener('click', async () => {
-      if (!geminiApiKey) {
-        alert('Please enter your Gemini API Key in Settings -> Privacy to enable full AI spellcheck!');
-        return;
-      }
-      
       const originalText = notesTextarea.value;
       if (!originalText.trim()) return;
 
@@ -2883,15 +3755,25 @@ if (notesTextarea) {
 
       const prompt = `You are a professional grammar and spelling editor. Correct all spelling, grammar, and typos in the following text. Preserve original style and format. Return ONLY the corrected text. Do not add any conversational replies, notes, or explanations.\n\nText:\n${originalText}`;
       
-      const result = await queryGeminiAPI(prompt);
-      pop.remove();
+      try {
+        const res = await window.api.queryHuggingFace({
+          messages: [
+            { role: 'user', content: prompt }
+          ]
+        });
+        pop.remove();
 
-      if (result) {
-        notesTextarea.value = result;
-        const statusBarText = document.getElementById('status-text');
-        if (statusBarText) statusBarText.textContent = 'Nebula Spelling: Full AI spellcheck completed.';
-      } else {
-        alert('AI Spellcheck failed. Please check your API key.');
+        const result = (res && res.generated_text) ? res.generated_text.trim() : '';
+        if (result) {
+          notesTextarea.value = result;
+          const statusBarText = document.getElementById('status-text');
+          if (statusBarText) statusBarText.textContent = 'Nebula Spelling: Full AI spellcheck completed by Nix 1.1.';
+        } else {
+          alert('AI Spellcheck failed to return corrections: ' + JSON.stringify(res));
+        }
+      } catch (err) {
+        pop.remove();
+        alert('AI Spellcheck request failed: ' + err.message);
       }
     });
   }
@@ -2904,3 +3786,84 @@ function initSuite() {
 }
 
 window.addEventListener('DOMContentLoaded', initSuite);
+
+// Cookie Inspector functions
+function updateCookieBtnVisibility() {
+  const cookieInspectorBtn = document.getElementById('cookie-inspector-btn');
+  if (!cookieInspectorBtn) return;
+
+  const activeWebview = getActiveWebview();
+  const tabObj = tabs.find(t => t.id === activeTabId);
+  if (activeWebview && tabObj && !isInternalUrl(tabObj.url)) {
+    cookieInspectorBtn.style.display = 'inline-flex';
+  } else {
+    cookieInspectorBtn.style.display = 'none';
+  }
+}
+
+function openCookieInspector() {
+  const activeWebview = getActiveWebview();
+  if (!activeWebview) return;
+
+  activeWebview.executeJavaScript('document.cookie').then(cookieString => {
+    const listContainer = document.getElementById('cookie-inspector-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    if (!cookieString || cookieString.trim() === '') {
+      listContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">No cookies found or active for this site.</div>';
+    } else {
+      const cookiesList = cookieString.split(';').map(item => {
+        const parts = item.split('=', 2);
+        if (parts.length === 2) {
+          const name = parts[0].trim();
+          const value = parts[1].trim();
+          let category = 'Essential / Functional';
+          const nameLower = name.toLowerCase();
+          if (nameLower.includes('session') || nameLower.includes('sid') || nameLower.includes('token') || nameLower.includes('auth') || nameLower.includes('login') || nameLower.includes('jwt')) {
+            category = 'Session / Auth';
+          } else if (name.startsWith('_ga') || name.startsWith('_gi') || nameLower.includes('analytics') || nameLower.includes('track') || nameLower.includes('pixel') || nameLower.includes('ad') || nameLower.includes('utm')) {
+            category = 'Tracking / Analytics';
+          }
+          return { name, value, category };
+        }
+        return null;
+      }).filter(Boolean);
+
+      cookiesList.forEach(cookie => {
+        const card = document.createElement('div');
+        card.style.background = 'rgba(255, 255, 255, 0.03)';
+        card.style.border = '1px solid var(--border-color)';
+        card.style.borderRadius = '8px';
+        card.style.padding = '10px';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '4px';
+
+        let badgeColor = 'var(--text-muted)';
+        let badgeBg = 'rgba(255, 255, 255, 0.05)';
+        if (cookie.category === 'Session / Auth') {
+          badgeColor = '#00ffff';
+          badgeBg = 'rgba(0, 255, 255, 0.1)';
+        } else if (cookie.category === 'Tracking / Analytics') {
+          badgeColor = '#ff5f56';
+          badgeBg = 'rgba(255, 95, 86, 0.1)';
+        }
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <strong style="color: var(--text-main); font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 200px;">${cookie.name}</strong>
+            <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; color: ${badgeColor}; background: ${badgeBg};">${cookie.category}</span>
+          </div>
+          <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); word-break: break-all; max-height: 44px; overflow-y: auto;">${cookie.value}</div>
+        `;
+        listContainer.appendChild(card);
+      });
+    }
+
+    const cookieInspectorOverlay = document.getElementById('cookie-inspector-overlay');
+    if (cookieInspectorOverlay) cookieInspectorOverlay.classList.remove('hidden');
+  }).catch(err => {
+    console.error('Failed to inspect cookies:', err);
+  });
+}

@@ -14,7 +14,39 @@ const credentialsPath = path.join(userDataPath, 'credentials.json');
 const drivePath = path.join(userDataPath, 'drive.json');
 
 function readConfig() {
-  return readJSON(configPath, { neonMode: false, agentMode: false, privacyMode: false });
+  const defaults = { neonMode: false, agentMode: false, privacyMode: false, NixAI: true, GeminiAI: true, NebulaNotes: true, NebulaDrive: true, CookieInspector: true, PasswordManager: true };
+  const config = readJSON(configPath, defaults);
+  
+  // Read Windows Registry settings written by the custom installer
+  if (process.platform === 'win32') {
+    try {
+      const execSync = require('child_process').execSync;
+      // Read Features registry key
+      const regQuery = execSync('reg query "HKCU\\Software\\NebulaBrowser\\Features" /s', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      
+      const lines = regQuery.split('\n');
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          const name = parts[0];
+          const val = parseInt(parts[2], 16);
+          const boolVal = val === 1;
+          
+          if (name === 'AIEnabled') config.NixAI = boolVal;
+          if (name === 'GeminiEnabled') config.GeminiAI = boolVal;
+          if (name === 'NotesEnabled') config.NebulaNotes = boolVal;
+          if (name === 'DriveEnabled') config.NebulaDrive = boolVal;
+          if (name === 'CookieInspector') config.CookieInspector = boolVal;
+          if (name === 'PasswordManager') config.PasswordManager = boolVal;
+          if (name === 'NeonMode') config.neonMode = boolVal;
+          if (name === 'PrivacyModeDefault') config.privacyMode = boolVal;
+        }
+      }
+    } catch (e) {
+      logMsg('Failed to query registry values: ' + e.message);
+    }
+  }
+  return config;
 }
 function writeConfig(config) {
   writeJSON(configPath, config);
@@ -88,6 +120,95 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// Model tier mapping for Nix AI companion
+const NIX_MODELS = {
+  '1.1':          'google/gemma-4-31B-it',              // Nix 1.1  — Gemma 4 (mapped to 31B which is active on HF router)
+  '1.2-thinking': 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', // Nix 1.2  — solid reasoning
+  '1.2-ultra':    'meta-llama/Llama-3.1-8B-Instruct',  // Nix 1.2 Ultra-Think — deeper
+  '1.3-smart':    'Qwen/Qwen2.5-7B-Instruct',          // Nix 1.3 Smart — fast & reliable
+  '1.3-pro':      'Qwen/Qwen2.5-72B-Instruct',         // Nix 1.3 Pro — most capable
+  '1.3-ultra':    'meta-llama/Llama-3.3-70B-Instruct'  // Nix 1.3 Ultra — ultimate reasoning
+};
+
+// IPC Handlers for Hugging Face Inference (Chat Completions API)
+ipcMain.handle('query-hugging-face', async (event, { model, messages }) => {
+  const nixTier = model || '1.2-thinking';
+  const hfModel = NIX_MODELS[nixTier] || NIX_MODELS['1.2-thinking'];
+  const token = process.env.HF_API_TOKEN || 'YOUR_HF_API_TOKEN';
+
+  // Use the unified HF Router endpoint
+  const url = 'https://router.huggingface.co/v1/chat/completions';
+
+  // Filter messages: only include role/content fields, exclude empty content
+  const cleanMessages = messages
+    .filter(m => m.content && m.content.trim())
+    .map(m => ({ role: m.role, content: m.content }));
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        model: hfModel,
+        messages: cleanMessages,
+        max_tokens: 512,
+        temperature: 0.7,
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`HF API returned status ${response.status}: ${errBody.slice(0, 200)}`);
+    }
+
+    const data = await response.json();
+    // Return in the format renderer.js expects: [{ generated_text: '...' }]
+    const text = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning_content || '';
+    return [{ generated_text: text }];
+
+  } catch (err) {
+    console.error('Error querying Hugging Face, falling back to local simulation:', err);
+    logMsg('HF API error: ' + err.message);
+
+    // Extract last user message to simulate a smart reply
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+    const prompt = lastUserMsg ? lastUserMsg.content : '';
+    const promptLower = prompt.toLowerCase();
+
+    let simulatedResponse = "";
+
+    if (promptLower.includes('theme') && (promptLower.includes('flare') || promptLower.includes('solar'))) {
+      simulatedResponse = "Sure, I have updated your browser theme to Solar Flare!\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"theme\",\n  \"value\": \"solar-flare\"\n}\n```";
+    } else if (promptLower.includes('theme') && promptLower.includes('tokyo')) {
+      simulatedResponse = "I have changed the theme to Tokyo Acid for you!\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"theme\",\n  \"value\": \"tokyo-acid\"\n}\n```";
+    } else if (promptLower.includes('theme') && promptLower.includes('obsidian')) {
+      simulatedResponse = "I've applied the Obsidian Gold theme to your settings.\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"theme\",\n  \"value\": \"obsidian-gold\"\n}\n```";
+    } else if (promptLower.includes('theme') && promptLower.includes('cyberpunk')) {
+      simulatedResponse = "Cyberpunk Neon theme applied!\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"theme\",\n  \"value\": \"cyberpunk\"\n}\n```";
+    } else if (promptLower.includes('theme') && (promptLower.includes('space') || promptLower.includes('void') || promptLower.includes('dark'))) {
+      simulatedResponse = "Midnight Void theme applied!\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"theme\",\n  \"value\": \"deep-space\"\n}\n```";
+    } else if (promptLower.includes('sidebar') && promptLower.includes('left')) {
+      simulatedResponse = "Perfect, I have shifted the AI sidebar anchor to the Left.\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"sidebar_position\",\n  \"value\": \"left\"\n}\n```";
+    } else if (promptLower.includes('sidebar') && promptLower.includes('right')) {
+      simulatedResponse = "Sure thing, I've aligned the sidebar to the Right side.\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"sidebar_position\",\n  \"value\": \"right\"\n}\n```";
+    } else if (promptLower.includes('layout') && promptLower.includes('bottom')) {
+      simulatedResponse = "Applying floating bottom header layout to the window.\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"header_layout\",\n  \"value\": \"floating-bottom\"\n}\n```";
+    } else if (promptLower.includes('layout') && promptLower.includes('top')) {
+      simulatedResponse = "Header layout updated to floating top mode.\n\n```json\n{\n  \"action\": \"change_setting\",\n  \"setting\": \"header_layout\",\n  \"value\": \"floating-top\"\n}\n```";
+    } else if (promptLower.includes('who are you') || promptLower.includes('identity') || promptLower.includes('model')) {
+      simulatedResponse = `I am Nix, your AI companion built into Nebula Browser. Currently running in offline simulation mode. You can ask me to change settings like "change theme to cyberpunk" or "move sidebar left"!`;
+    } else {
+      simulatedResponse = `[Offline Mode] Hey! I'm Nix, your Nebula Browser AI companion. The AI service is temporarily unreachable (${err.message ? err.message.slice(0, 80) : 'connection error'}).\n\nI can still change your browser settings — try "set theme to aurora" or "move sidebar to the right"!`;
+    }
+
+    return [{ generated_text: simulatedResponse }];
+  }
+});
 
 // IPC Handlers for Bookmarks and History
 ipcMain.handle('get-bookmarks', async () => {

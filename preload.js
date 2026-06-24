@@ -23,5 +23,6 @@ contextBridge.exposeInMainWorld('api', {
   deleteDriveFile: (id) => ipcRenderer.invoke('delete-drive-file', id),
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
   windowMaximize: () => ipcRenderer.invoke('window-maximize'),
-  windowClose: () => ipcRenderer.invoke('window-close')
+  windowClose: () => ipcRenderer.invoke('window-close'),
+  queryHuggingFace: (payload) => ipcRenderer.invoke('query-hugging-face', payload)
 });

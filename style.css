@@ -383,7 +383,9 @@ body {
   visibility: visible;
 }
 
-#gemini-webview {
+#gemini-webview,
+#claude-webview,
+#chatgpt-webview {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -391,6 +393,12 @@ body {
   position: relative !important;
   left: 0 !important;
   visibility: visible !important;
+}
+
+#gemini-webview.hidden,
+#claude-webview.hidden,
+#chatgpt-webview.hidden {
+  display: none !important;
 }
 
 /* Gorgeous Dashboard style New Tab Page */
@@ -643,6 +651,25 @@ body {
   word-break: break-word;
 }
 
+.chat-message b {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.chat-message i {
+  color: var(--text-muted);
+}
+
+.chat-message code {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #00ffff;
+}
+
 .chat-message.assistant {
   background-color: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
@@ -700,6 +727,7 @@ body {
 /* Quick Notes */
 #notes-panel {
   padding: 16px;
+  position: relative;
 }
 
 #notes-textarea {
@@ -1029,7 +1057,9 @@ body {
 .deep-space-preview { background: linear-gradient(135deg, #0f1016 0%, #8a2be2 100%); }
 .cyberpunk-preview { background: linear-gradient(135deg, #05050a 0%, #ff007f 100%); }
 .aurora-preview { background: linear-gradient(135deg, #0c0b16 0%, #4cc9f0 100%); }
-.light-frost-preview { background: linear-gradient(135deg, #f0f4f8 0%, #0077ff 100%); }
+.solar-flare-preview { background: linear-gradient(135deg, #120907 0%, #ff4500 50%, #ffaa00 100%); }
+.tokyo-acid-preview { background: linear-gradient(135deg, #070a0e 0%, #00ff66 50%, #00ffff 100%); }
+.obsidian-gold-preview { background: linear-gradient(135deg, #0a0907 0%, #d4af37 50%, #f3e5ab 100%); }
 
 .theme-card span {
   font-size: 13px;
@@ -1166,21 +1196,52 @@ body {
   --glass-blur: blur(20px);
 }
 
-/* Custom Light Frost Theme variables */
-[data-theme="light-frost"] {
-  --bg-dark: #f0f4f8;
-  --bg-panel: rgba(255, 255, 255, 0.8);
-  --bg-tab-bar: #e1e8f0;
-  --bg-tab-inactive: #d2dbe5;
-  --bg-tab-active: #ffffff;
-  --accent-gradient: linear-gradient(135deg, #0077ff 0%, #00d4ff 100%);
-  --accent-color: #0077ff;
-  --accent-glow: rgba(0, 119, 255, 0.2);
-  --text-main: #1c2d42;
-  --text-muted: #627d98;
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-focus: #0077ff;
-  --glass-blur: blur(12px);
+/* Custom Solar Flare Theme variables */
+[data-theme="solar-flare"] {
+  --bg-dark: #120907;
+  --bg-panel: rgba(30, 15, 12, 0.85);
+  --bg-tab-bar: #080403;
+  --bg-tab-inactive: #1a0d0a;
+  --bg-tab-active: #2d1611;
+  --accent-gradient: linear-gradient(135deg, #ff4500 0%, #ffaa00 100%);
+  --accent-color: #ffaa00;
+  --accent-glow: rgba(255, 170, 0, 0.35);
+  --text-main: #ffebe6;
+  --text-muted: #ab928c;
+  --border-color: rgba(255, 69, 0, 0.2);
+  --border-focus: #ffaa00;
+}
+
+/* Custom Tokyo Acid Theme variables */
+[data-theme="tokyo-acid"] {
+  --bg-dark: #070a0e;
+  --bg-panel: rgba(12, 20, 28, 0.85);
+  --bg-tab-bar: #040609;
+  --bg-tab-inactive: #0d151e;
+  --bg-tab-active: #162332;
+  --accent-gradient: linear-gradient(135deg, #00ff66 0%, #00ffff 100%);
+  --accent-color: #00ff66;
+  --accent-glow: rgba(0, 255, 102, 0.35);
+  --text-main: #e0ffe6;
+  --text-muted: #7a9985;
+  --border-color: rgba(0, 255, 102, 0.2);
+  --border-focus: #00ffff;
+}
+
+/* Custom Obsidian Gold Theme variables */
+[data-theme="obsidian-gold"] {
+  --bg-dark: #0a0907;
+  --bg-panel: rgba(22, 19, 15, 0.85);
+  --bg-tab-bar: #050403;
+  --bg-tab-inactive: #13110d;
+  --bg-tab-active: #211d17;
+  --accent-gradient: linear-gradient(135deg, #d4af37 0%, #f3e5ab 100%);
+  --accent-color: #d4af37;
+  --accent-glow: rgba(212, 175, 55, 0.35);
+  --text-main: #faf6e8;
+  --text-muted: #a69a80;
+  --border-color: rgba(212, 175, 55, 0.2);
+  --border-focus: #f3e5ab;
 }
 
 /* Layout modes for Header Bar (Animates Collapses Smoothly) */
@@ -2306,6 +2367,202 @@ body[data-header-layout="floating-bottom"] .permission-banner.hidden {
   to { opacity: 0.5; }
 }
 
+/* Local AI Chat companion styles */
+.chat-message {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
 
+.chat-message.user {
+  background: var(--accent-gradient);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+  box-shadow: 0 4px 10px rgba(138, 43, 226, 0.2);
+}
 
+.chat-message.assistant {
+  background: var(--bg-tab-inactive);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+
+.chat-message.loading {
+  background: var(--bg-tab-inactive);
+  color: var(--text-muted);
+  align-self: flex-start;
+  animation: ai-pulse 1s alternate infinite;
+}
+
+/* Webview border glowing when Nix is reading page content */
+.webview-container.nix-reading {
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 15px rgba(0, 255, 102, 0.4) !important;
+  border: 1px solid rgba(0, 255, 102, 0.5) !important;
+  transition: all 0.3s ease;
+}
+
+/* Thinking step styles */
+.nix-thinking-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  background: var(--bg-tab-inactive);
+  border: 1px solid var(--border-color);
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+  width: 80%;
+}
+
+.nix-thinking-header {
+  font-weight: 600;
+  color: #00ff66;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nix-thinking-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-family-sans);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.nix-thinking-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.6;
+}
+
+.nix-thinking-step.active {
+  opacity: 1;
+  color: var(--text-main);
+  animation: pulse-active 1s alternate infinite;
+}
+
+.nix-thinking-step.completed {
+  opacity: 0.8;
+  color: #00ff66;
+}
+
+@keyframes pulse-active {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+/* Nix 1.2 Permission Prompt Styles */
+.nix-prompt-bubble {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  margin: 8px 0;
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.nix-prompt-text {
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.nix-prompt-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.nix-prompt-btn {
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.nix-prompt-btn:hover {
+  opacity: 0.9;
+}
+
+.nix-prompt-btn.allow {
+  background: #00ff66;
+  color: #05050a;
+}
+
+.nix-prompt-btn.deny {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+/* Nix Model Switcher Dropdown */
+.nix-model-option:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #00ff66 !important;
+}
+#nix-model-select-trigger:hover {
+  background: rgba(0, 255, 102, 0.08) !important;
+  border-color: rgba(0, 255, 102, 0.4) !important;
+}
+#nix-new-chat-btn:hover {
+  background: rgba(0, 255, 102, 0.25) !important;
+  border-color: rgba(0, 255, 102, 0.5) !important;
+  box-shadow: 0 0 6px rgba(0, 255, 102, 0.3);
+}
+
+/* ==========================================
+   Nebula 1.3 Feature Drop: Styles
+   ========================================== */
+
+/* Tab Groups Styling */
+.tab.group-red { border-left: 4px solid #ff453a !important; }
+.tab.group-blue { border-left: 4px solid #0a84ff !important; }
+.tab.group-green { border-left: 4px solid #30d158 !important; }
+.tab.group-purple { border-left: 4px solid #bf5af2 !important; }
+
+/* Auto-hide Address/Toolbar Layout */
+body[data-header-layout="autohide"] .header-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(-40px);
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.25, 1), background-color 0.2s;
+  height: 48px;
+  opacity: 0.15;
+}
+
+body[data-header-layout="autohide"] .header-bar:hover,
+body[data-header-layout="autohide"] .header-bar:focus-within {
+  transform: translateY(0);
+  opacity: 1;
+  background-color: var(--bg-tab-bar);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+body[data-header-layout="autohide"] .main-content {
+  margin-top: 8px; /* Leave small trigger area at top */
+  height: calc(100vh - 8px);
+}
+
+/* Hide window controls when running inside the custom windowing manager stack */
+body.in-os-frame .window-controls {
+  display: none !important;
+}
 
